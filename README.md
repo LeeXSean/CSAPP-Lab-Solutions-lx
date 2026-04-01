@@ -38,6 +38,10 @@ Exploit stack buffer overflows to hijack control flow. Phase 1–3 use code inje
 #### Shell Lab [`Shell_Lab/`](Shell_Lab/)
 Implement a Unix shell (`tsh`) supporting foreground/background job control, signal handling (SIGINT, SIGTSTP, SIGCHLD), and built-in commands (`jobs`, `fg`, `bg`, `quit`). Signal masking is used to eliminate race conditions between `fork` and `addjob`.
 
+## Acknowledgment
+
+Special thanks to [virgiling](https://github.com/virgiling) for the helpful [blog](https://virgiling.wiki/) that provided great guidance throughout these labs.
+
 ---
 
 ## CS:APP 实验 <a name="csapp-labs-2"></a>
@@ -77,3 +81,7 @@ Implement a Unix shell (`tsh`) supporting foreground/background job control, sig
 ---
 
 *所有已完成实验均通过官方评分脚本，满分通过。*
+
+## 致谢
+
+特别感谢 [virgiling](https://github.com/virgiling) 大佬，感谢大佬写的[博客](https://virgiling.wiki/)，在做实验期间提供了很大的帮助。
