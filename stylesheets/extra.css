@@ -1,0 +1,660 @@
+/* =============================================================================
+   CS:APP Lab Notes — elegant editorial theme layered on MkDocs Material.
+   Warm paper, serif display, sienna accent. All colors flow from the two
+   palette blocks below; component rules only ever reference the tokens.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Noto+Serif+SC:wght@300;400;500;600;700;900&family=JetBrains+Mono:ital,wght@0,400..700;1,400&family=Inter:wght@400..600&display=swap');
+
+/* ── Design tokens ─────────────────────────────────────────────────────────*/
+:root {
+  --serif: "Newsreader", "Noto Serif SC", Georgia, "Songti SC", serif;
+  --sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  --mono:  "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  --md-text-font: var(--serif);
+  --md-code-font: var(--mono);
+
+  --reading-measure: 46rem;
+  --hairline: color-mix(in srgb, var(--md-default-fg-color) 12%, transparent);
+}
+
+/* ── Palette · Light ───────────────────────────────────────────────────────*/
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #9a4a2e;
+  --md-primary-fg-color--light: #b56744;
+  --md-primary-fg-color--dark:  #7c3a22;
+  --md-primary-bg-color:        #fdf9f2;   /* text on primary surfaces */
+  --md-accent-fg-color:         #b5643f;
+  --md-accent-bg-color:         #fdf9f2;
+
+  --md-default-bg-color:            #fbf8f3;
+  --md-default-fg-color:            #26221d;
+  --md-default-fg-color--light:     #5c554c;
+  --md-default-fg-color--lighter:   #8a8178;
+  --md-default-fg-color--lightest:  #d8d0c4;
+
+  --md-typeset-a-color: #9a4a2e;
+  --md-code-bg-color:   #f3ede3;
+  --md-code-fg-color:   #433c33;
+  --md-typeset-mark-color: color-mix(in srgb, #b5643f 20%, transparent);
+  --md-typeset-kbd-color: #f3ede3;
+
+  --md-footer-bg-color:       #f3ede3;
+  --md-footer-bg-color--dark: #ede5d8;
+  --md-footer-fg-color:       #5c554c;
+
+  --card-bg: #ffffff;
+  --glow-1: rgba(154, 74, 46, 0.10);
+  --glow-2: rgba(203, 155, 86, 0.13);
+
+  /* Admonition accents — muted, warm-compatible */
+  --adm-note:     #9a4a2e;
+  --adm-abstract: #52657d;
+  --adm-info:     #4a7382;
+  --adm-tip:      #3f7d64;
+  --adm-success:  #43824d;
+  --adm-question: #6f7d3a;
+  --adm-warning:  #a8742a;
+  --adm-failure:  #a33d2e;
+  --adm-danger:   #9c2f2f;
+  --adm-bug:      #8f3e5c;
+  --adm-example:  #7a5a8c;
+  --adm-quote:    #7a7267;
+}
+
+/* ── Palette · Dark (slate) ────────────────────────────────────────────────*/
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #d98a5f;
+  --md-primary-fg-color--light: #e6a074;
+  --md-primary-fg-color--dark:  #b96f47;
+  --md-primary-bg-color:        #1d1409;   /* text on primary surfaces */
+  --md-accent-fg-color:         #eaa876;
+  --md-accent-bg-color:         #1d1409;
+
+  --md-default-bg-color:            #17140f;
+  --md-default-fg-color:            #e8e0d3;
+  --md-default-fg-color--light:     #b7ac9b;
+  --md-default-fg-color--lighter:   #8a8073;
+  --md-default-fg-color--lightest:  #3a3427;
+
+  --md-typeset-a-color: #e2a377;
+  --md-code-bg-color:   #211c15;
+  --md-code-fg-color:   #ddd3c4;
+  --md-typeset-mark-color: color-mix(in srgb, #eaa876 22%, transparent);
+  --md-typeset-kbd-color: #211c15;
+
+  --md-footer-bg-color:       #14110c;
+  --md-footer-bg-color--dark: #100d09;
+  --md-footer-fg-color:       #b7ac9b;
+
+  --card-bg: #1e1a14;
+  --glow-1: rgba(217, 138, 95, 0.09);
+  --glow-2: rgba(203, 155, 86, 0.06);
+
+  --adm-note:     #d98a5f;
+  --adm-abstract: #8fa9c4;
+  --adm-info:     #85b3c2;
+  --adm-tip:      #82bd9f;
+  --adm-success:  #7bc98a;
+  --adm-question: #b3bd7a;
+  --adm-warning:  #d9a45c;
+  --adm-failure:  #d97b66;
+  --adm-danger:   #d96d6d;
+  --adm-bug:      #c983a4;
+  --adm-example:  #b394c9;
+  --adm-quote:    #a89f92;
+}
+
+/* ── Base typography ───────────────────────────────────────────────────────*/
+body { font-optical-sizing: auto; }
+.md-typeset {
+  font-size: 0.86rem;
+  line-height: 1.78;
+  letter-spacing: 0.002em;
+}
+.md-typeset p { text-wrap: pretty; }
+.md-typeset p,
+.md-typeset li {
+  color: var(--md-default-fg-color);
+}
+
+/* Headings — serif display with tighter tracking */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--md-default-fg-color);
+  text-wrap: balance;
+}
+.md-typeset h1 {
+  font-size: 2.05rem;
+  line-height: 1.18;
+  font-weight: 500;
+  margin: 0 0 0.9rem;
+  letter-spacing: -0.02em;
+}
+.md-typeset h2 {
+  position: relative;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 2.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--hairline);
+}
+/* A short sienna tick at the left end of every section rule */
+.md-typeset h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 2.1rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--md-primary-fg-color);
+}
+.md-typeset h3 {
+  font-size: 1.18rem;
+  margin-top: 1.9rem;
+}
+.md-typeset h4 { font-size: 1.02rem; }
+
+/* Heading anchors — quiet ¶, revealed on hover */
+.md-typeset .headerlink {
+  border: none;
+  margin-left: 0.4rem;
+  font-size: 0.72em;
+  color: var(--md-default-fg-color--lighter);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity .2s ease, transform .2s ease, color .2s ease;
+}
+.md-typeset :is(h1, h2, h3, h4, h5, h6):hover > .headerlink,
+.md-typeset :target > .headerlink,
+.md-typeset .headerlink:focus-visible {
+  opacity: 0.8;
+  transform: none;
+}
+.md-typeset .headerlink:hover { color: var(--md-primary-fg-color); }
+
+/* Links — refined underline */
+.md-typeset a {
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--md-typeset-a-color) 35%, transparent);
+  transition: border-color .18s ease, color .18s ease;
+}
+.md-typeset a:hover {
+  color: var(--md-accent-fg-color);
+  border-bottom-color: var(--md-accent-fg-color);
+}
+
+/* ── Reading column — magazine measure ─────────────────────────────────────*/
+.md-content { max-width: none; }
+@media screen and (min-width: 60em) {
+  .md-content__inner { margin-inline: auto; max-width: var(--reading-measure); }
+}
+.md-content__inner { padding-top: 1.4rem; }
+
+/* ── Quiet, editorial header ───────────────────────────────────────────────*/
+.md-header {
+  background-color: color-mix(in srgb, var(--md-default-bg-color) 88%, transparent);
+  color: var(--md-default-fg-color);
+  box-shadow: none;
+  border-bottom: 1px solid var(--hairline);
+  backdrop-filter: saturate(1.4) blur(8px);
+  -webkit-backdrop-filter: saturate(1.4) blur(8px);
+  transition: background-color .3s ease;
+}
+.md-header__title { font-weight: 600; font-size: 0.9rem; letter-spacing: -0.01em; }
+.md-header--shadow { box-shadow: 0 1px 0 var(--hairline); }
+.md-header__button.md-logo { color: var(--md-primary-fg-color); }
+.md-header__button.md-logo:hover { opacity: 0.8; }
+.md-tabs { background: transparent; color: var(--md-default-fg-color); }
+
+/* Instant-navigation progress bar */
+.md-progress { background: var(--md-primary-fg-color); }
+
+/* Search field */
+.md-search__form {
+  background-color: color-mix(in srgb, var(--md-default-fg-color) 6%, transparent);
+  border-radius: 2rem;
+}
+.md-search__form:hover { background-color: color-mix(in srgb, var(--md-default-fg-color) 9%, transparent); }
+.md-search__input { font-family: var(--sans); font-size: 0.76rem; }
+
+/* ── Sidebar navigation ────────────────────────────────────────────────────*/
+.md-nav { font-family: var(--sans); font-size: 0.72rem; }
+.md-nav__title {
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--lighter);
+}
+.md-nav__link { transition: color .15s ease; }
+.md-nav__link:is(:hover, :focus-visible) { color: var(--md-accent-fg-color); }
+.md-nav__item .md-nav__link--active,
+.md-nav__item .md-nav__link--active code {
+  font-weight: 600;
+  color: var(--md-primary-fg-color);
+}
+.md-sidebar__scrollwrap::-webkit-scrollbar { width: 4px; }
+
+/* ── Blockquote ────────────────────────────────────────────────────────────*/
+.md-typeset blockquote {
+  border-left: 2px solid var(--md-primary-fg-color);
+  color: var(--md-default-fg-color--light);
+  font-style: italic;
+  padding-left: 1.1rem;
+  margin-left: 0;
+}
+.md-typeset blockquote p { font-size: 1.02em; }
+
+/* ── Code ──────────────────────────────────────────────────────────────────*/
+.md-typeset code { font-size: 0.78em; border-radius: 0.3rem; }
+.md-typeset pre > code { font-size: 0.74rem; line-height: 1.7; padding: 0.9rem 1rem; }
+.md-typeset .highlight {
+  border: 1px solid var(--hairline);
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+.md-typeset .highlight > .filename,
+.md-typeset .highlighttable .filename {
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+}
+.md-typeset .highlighttable .linenos { color: var(--md-default-fg-color--lighter); opacity: .7; }
+
+/* Copy button — quiet until needed */
+.md-clipboard,
+.md-code__button { color: var(--md-default-fg-color--lighter); }
+:is(.md-clipboard, .md-code__button):is(:hover, :focus-visible) { color: var(--md-primary-fg-color); }
+
+/* ASCII diagrams (``` text blocks) — sketchbook, not source code */
+.md-typeset .highlight.language-text {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--md-default-fg-color) 20%, transparent);
+  background: none;
+}
+.md-typeset .highlight.language-text pre > code {
+  background-color: color-mix(in srgb, var(--md-default-fg-color) 3.5%, var(--md-default-bg-color));
+  color: var(--md-default-fg-color--light);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+/* Code annotation markers */
+.md-typeset .md-annotation__index { font-family: var(--sans); font-weight: 600; }
+
+/* Thin scrollbars inside code blocks */
+.md-typeset pre > code::-webkit-scrollbar { height: 6px; }
+
+/* ── Admonitions — one quiet system, muted per-type accents ───────────────*/
+.md-typeset :is(.admonition, details) {
+  --adm: var(--md-primary-fg-color);
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-left-width: 3px;
+  border-left-color: var(--adm);
+  border-radius: 0.5rem;
+  box-shadow: none;
+}
+.md-typeset :is(.admonition, details):is(.abstract, .summary, .tldr)      { --adm: var(--adm-abstract); }
+.md-typeset :is(.admonition, details):is(.info, .todo)                    { --adm: var(--adm-info); }
+.md-typeset :is(.admonition, details):is(.tip, .hint, .important)         { --adm: var(--adm-tip); }
+.md-typeset :is(.admonition, details):is(.success, .check, .done)         { --adm: var(--adm-success); }
+.md-typeset :is(.admonition, details):is(.question, .help, .faq)          { --adm: var(--adm-question); }
+.md-typeset :is(.admonition, details):is(.warning, .caution, .attention)  { --adm: var(--adm-warning); }
+.md-typeset :is(.admonition, details):is(.failure, .fail, .missing)       { --adm: var(--adm-failure); }
+.md-typeset :is(.admonition, details):is(.danger, .error)                 { --adm: var(--adm-danger); }
+.md-typeset :is(.admonition, details):is(.bug)                            { --adm: var(--adm-bug); }
+.md-typeset :is(.admonition, details):is(.example)                        { --adm: var(--adm-example); }
+.md-typeset :is(.admonition, details):is(.quote, .cite)                   { --adm: var(--adm-quote); }
+
+/* Beat Material's per-type selectors (same specificity, later source) */
+.md-typeset :is(.admonition, details):is(.note, .abstract, .summary, .tldr,
+  .info, .todo, .tip, .hint, .important, .success, .check, .done,
+  .question, .help, .faq, .warning, .caution, .attention,
+  .failure, .fail, .missing, .danger, .error, .bug, .example, .quote, .cite) {
+  border-color: var(--hairline);
+  border-left-color: var(--adm);
+}
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary) {
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background-color: color-mix(in srgb, var(--adm) 8%, transparent);
+}
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary)::before {
+  background-color: var(--adm);
+}
+.md-typeset details > summary::after { color: var(--adm); }
+
+/* The “Verified locally” seal gets a faint wash of its green */
+.md-typeset :is(.admonition, details):is(.success, .check, .done) {
+  background-color: color-mix(in srgb, var(--adm) 4%, var(--md-default-bg-color));
+}
+
+/* ── Tables ────────────────────────────────────────────────────────────────*/
+.md-typeset table:not([class]) {
+  font-size: 0.76rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.5rem;
+}
+.md-typeset table:not([class]) th {
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background-color: color-mix(in srgb, var(--md-default-fg-color) 4%, transparent);
+}
+.md-typeset table:not([class]) tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--md-default-fg-color) 2.5%, transparent);
+}
+.md-typeset table:not([class]) tbody tr:hover {
+  background-color: color-mix(in srgb, var(--md-primary-fg-color) 6%, transparent);
+  box-shadow: none;
+}
+
+/* ── Horizontal rule — a slender centered mark ─────────────────────────────*/
+.md-typeset hr {
+  border: none;
+  height: 1px;
+  margin: 2.6rem auto;
+  width: 100%;
+  background: linear-gradient(to right, transparent, var(--hairline) 20%, var(--hairline) 80%, transparent);
+}
+
+/* ── Keys, marks, math ─────────────────────────────────────────────────────*/
+.md-typeset kbd {
+  font: 500 0.68rem/1.5 var(--mono);
+  color: var(--md-default-fg-color);
+  background-color: var(--md-code-bg-color);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  box-shadow: none;
+  padding: 0.08rem 0.4rem;
+  vertical-align: 0.1em;
+}
+.md-typeset mark {
+  background-color: var(--md-typeset-mark-color);
+  border-radius: 0.15rem;
+  padding: 0 0.15em;
+}
+.md-typeset mjx-container { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+
+/* ── Footer ────────────────────────────────────────────────────────────────*/
+.md-footer { border-top: 1px solid var(--hairline); }
+.md-footer__title { font-family: var(--serif); }
+.md-footer__direction {
+  font-family: var(--sans);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+.md-footer__link:is(:hover, :focus-visible) { opacity: 1; }
+.md-footer-meta { font-family: var(--sans); font-size: 0.72rem; }
+.md-copyright { font-size: 0.62rem; }
+.md-social__link:hover { color: var(--md-primary-fg-color); }
+
+/* Back-to-top pill */
+.md-top {
+  background-color: var(--card-bg);
+  color: var(--md-default-fg-color--light);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--md-default-fg-color) 10%, transparent);
+}
+.md-top:is(:hover, :focus-visible) {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+}
+
+/* ── Selection, focus, scrollbars ──────────────────────────────────────────*/
+::selection {
+  background: color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
+}
+html { scroll-behavior: smooth; }
+:focus-visible { outline: 2px solid var(--md-accent-fg-color); outline-offset: 2px; }
+@media (pointer: fine) {
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--md-default-fg-color) 18%, transparent);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--md-default-fg-color) 30%, transparent);
+  }
+}
+
+/* =============================================================================
+   Home page — hero + lab cards
+   ========================================================================== */
+.hero {
+  position: relative;
+  margin: 1.5rem 0 2.6rem;
+}
+/* Soft warm glow behind the masthead — masked so no edge ever shows */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -2.5rem 0 auto;
+  height: 26rem;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(30rem 18rem at 30% 8%, var(--glow-1), transparent 62%),
+    radial-gradient(24rem 15rem at 74% 2%, var(--glow-2), transparent 62%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 68%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 68%, transparent);
+}
+.hero .eyebrow {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--md-primary-fg-color);
+  margin-bottom: 0.7rem;
+}
+.md-typeset .hero h1 {
+  font-size: clamp(2.4rem, 6vw, 3.4rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  margin-bottom: 0.6rem;
+}
+.hero .lede {
+  font-size: 1.16rem;
+  line-height: 1.6;
+  color: var(--md-default-fg-color--light);
+  max-width: 38rem;
+}
+.hero .hero-actions { margin-top: 1.6rem; display: flex; gap: 0.7rem; flex-wrap: wrap; }
+
+/* Masthead stats strip */
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.4rem;
+  margin-top: 2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--hairline);
+}
+.hero-stats .stat { display: flex; flex-direction: column; gap: 0.15rem; }
+.hero-stats .stat-num {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--md-default-fg-color);
+}
+.hero-stats .stat-lbl {
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--lighter);
+}
+
+/* Buttons */
+.md-typeset .md-button {
+  font-family: var(--sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 2rem;
+  border-width: 1px;
+  padding: 0.5rem 1.15rem;
+  transition: transform .15s ease, background-color .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.md-typeset .md-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
+}
+
+/* Card grid */
+.md-typeset .grid.cards {
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+.md-typeset .grid.cards > :is(ul, ol) > li,
+.md-typeset .grid.cards > .card {
+  border: 1px solid var(--hairline);
+  border-radius: 0.7rem;
+  padding: 1.05rem 1.15rem;
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--md-default-fg-color) 5%, transparent);
+  transition: transform .18s ease, box-shadow .22s ease, border-color .22s ease, background-color .22s ease;
+}
+.md-typeset .grid.cards > :is(ul, ol) > li:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--md-primary-fg-color) 45%, transparent);
+  background: color-mix(in srgb, var(--md-primary-fg-color) 2.5%, var(--card-bg));
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--md-default-fg-color) 12%, transparent);
+}
+.md-typeset .grid.cards > :is(ul, ol) > li { font-size: 0.8rem; line-height: 1.65; }
+
+/* Top row: folio tag left, result pill right */
+.md-typeset .grid.cards > :is(ul, ol) > li > p:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0 0 0.45rem;
+}
+.md-typeset .grid.cards .lab-tag {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--md-primary-fg-color) 78%, var(--md-default-fg-color--lighter));
+  white-space: nowrap;
+}
+
+/* Card titles — clean serif links with a sliding arrow */
+.md-typeset .grid.cards h3 { font-size: 1.04rem; margin: 0.1rem 0 0.5rem; }
+.md-typeset .grid.cards h3 a { border-bottom: none; color: var(--md-default-fg-color); }
+.md-typeset .grid.cards h3 a::after {
+  content: "→";
+  display: inline-block;
+  margin-left: 0.35rem;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.md-typeset .grid.cards > :is(ul, ol) > li:hover h3 a {
+  color: var(--md-primary-fg-color);
+}
+.md-typeset .grid.cards > :is(ul, ol) > li:hover h3 a::after {
+  opacity: 0.9;
+  transform: none;
+}
+.md-typeset .grid.cards hr {
+  margin: 0.65rem 0;
+  width: 100%;
+  background: var(--hairline);
+  height: 1px;
+}
+
+/* Status pills */
+.pill {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  line-height: 1.8;
+  padding: 0.05rem 0.55rem;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.pill--done {
+  background: color-mix(in srgb, #3a7d44 11%, transparent);
+  border-color: color-mix(in srgb, #3a7d44 32%, transparent);
+  color: #2f6b39;
+}
+.pill--wip {
+  background: color-mix(in srgb, #b5643f 12%, transparent);
+  border-color: color-mix(in srgb, #b5643f 34%, transparent);
+  color: #a1502e;
+}
+[data-md-color-scheme="slate"] .pill--done {
+  background: color-mix(in srgb, #7bc98a 10%, transparent);
+  border-color: color-mix(in srgb, #7bc98a 30%, transparent);
+  color: #7bc98a;
+}
+[data-md-color-scheme="slate"] .pill--wip {
+  background: color-mix(in srgb, #e6a074 10%, transparent);
+  border-color: color-mix(in srgb, #e6a074 30%, transparent);
+  color: #e6a074;
+}
+
+/* ── Article masthead — meta line under the title ──────────────────────────*/
+.article-meta {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  color: var(--md-default-fg-color--lighter);
+  letter-spacing: 0.04em;
+  margin-top: -0.35rem;
+  margin-bottom: 1.8rem;
+  padding-bottom: 1.05rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.article-meta .dot { margin: 0 0.5rem; opacity: 0.5; }
+.md-typeset .article-meta a {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  border-bottom: none;
+  color: var(--md-primary-fg-color);
+}
+.md-typeset .article-meta a:hover { color: var(--md-accent-fg-color); }
+
+/* ── Entrance animation — gentle rise, staggered masthead ──────────────────*/
+@media (prefers-reduced-motion: no-preference) {
+  .md-content__inner > :nth-child(-n+14) {
+    animation: rise .45s cubic-bezier(.2, .7, .2, 1) both;
+  }
+  .md-content__inner > :nth-child(1) { animation-delay: .02s; }
+  .md-content__inner > :nth-child(2) { animation-delay: .06s; }
+  .md-content__inner > :nth-child(3) { animation-delay: .10s; }
+  .md-content__inner > :nth-child(4) { animation-delay: .14s; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+  }
+}

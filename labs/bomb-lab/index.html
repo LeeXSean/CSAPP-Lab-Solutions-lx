@@ -1,0 +1,1160 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Defusing a binary bomb phase by phase — reading x86-64 assembly in GDB.">
+      
+      
+        <meta name="author" content="Xiang Li">
+      
+      
+        <link rel="canonical" href="https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/bomb-lab/">
+      
+      
+        <link rel="prev" href="../data-lab/">
+      
+      
+        <link rel="next" href="../attack-lab/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Bomb Lab - CS:APP Lab Notes</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M12%208a4%204%200%200%200-4%204%204%204%200%200%200%204%204%204%204%200%200%200%204-4%204%204%200%200%200-4-4%22/%3E%3C/svg%3E');}</style>
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#bomb-lab-defusing-the-bomb" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="CS:APP Lab Notes" class="md-header__button md-logo" aria-label="CS:APP Lab Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 17H7V7h10m4 4V9h-2V7a2 2 0 0 0-2-2h-2V3h-2v2h-2V3H9v2H7c-1.11 0-2 .89-2 2v2H3v2h2v2H3v2h2v2a2 2 0 0 0 2 2h2v2h2v-2h2v2h2v-2h2a2 2 0 0 0 2-2v-2h2v-2h-2v-2m-6 2h-2v-2h2m2-2H9v6h6z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CS:APP Lab Notes
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Bomb Lab
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LeeXSean/CSAPP-Lab-Solutions-lx
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="CS:APP Lab Notes" class="md-nav__button md-logo" aria-label="CS:APP Lab Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 17H7V7h10m4 4V9h-2V7a2 2 0 0 0-2-2h-2V3h-2v2h-2V3H9v2H7c-1.11 0-2 .89-2 2v2H3v2h2v2H3v2h2v2a2 2 0 0 0 2 2h2v2h2v-2h2v2h2v-2h2a2 2 0 0 0 2-2v-2h2v-2h-2v-2m-6 2h-2v-2h2m2-2H9v6h6z"/></svg>
+
+    </a>
+    CS:APP Lab Notes
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LeeXSean/CSAPP-Lab-Solutions-lx
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Labs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Labs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bomb Lab
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bomb Lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-a-plain-string-compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-a-loop-over-six-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-a-switch-jump-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-a-recursive-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-a-table-lookup-cipher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-reordering-a-linked-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-secret-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The secret phase
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attack-lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attack Lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cache-lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cache Lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../malloc-lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Malloc Lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proxy-lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proxy Lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-a-plain-string-compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-a-loop-over-six-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-a-switch-jump-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-a-recursive-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-a-table-lookup-cipher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-reordering-a-linked-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-secret-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The secret phase
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="bomb-lab-defusing-the-bomb">Bomb Lab · Defusing the Bomb<a class="headerlink" href="#bomb-lab-defusing-the-bomb" title="Permanent link">¶</a></h1>
+<p class="article-meta">Reverse engineering <span class="dot">·</span> Difficulty ★★★ <span class="dot">·</span> Keywords: GDB, x86-64, jump tables, recursion, BST <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/tree/main/Bomb_Lab">Source</a></p>
+
+<div class="admonition success">
+<p class="admonition-title">Verified locally</p>
+<p><code>./bomb psol.txt</code> defuses all <strong>6 phases plus the secret stage</strong> — ending on <em>"Congratulations! You've defused the bomb!"</em></p>
+</div>
+<p>A binary that reads a line, checks it against something hidden, and calls <code>explode_bomb</code> if you're wrong. Six phases, plus a seventh you have to <em>discover</em>. The only tool that matters is GDB, and the only skill is reading intent out of assembly.</p>
+<div class="admonition abstract">
+<p class="admonition-title">The method</p>
+<p>The bomb ships with no source for the phases — only the executable. Every phase follows the same anatomy, and so does the way in:</p>
+<ol>
+<li><code>break phase_n</code>, <code>run</code>, then <code>disas</code> to see the phase's code.</li>
+<li>Find the conditional branch that guards the call to <code>explode_bomb</code>. The condition needed to <strong>skip</strong> that call is your constraint.</li>
+<li>Read the operands being compared — dump memory with <code>x/s</code>, <code>x/d</code>, print registers — and work <strong>backward</strong> to an input that satisfies them.</li>
+</ol>
+<p>A useful reflex: every <code>je/jne/jle/ja/...</code> that jumps <em>toward</em> <code>explode_bomb</code> is a wrong turn, so its negation points straight at the solution.</p>
+</div>
+<hr />
+<h2 id="phase-1-a-plain-string-compare">Phase 1 · a plain string compare<a class="headerlink" href="#phase-1-a-plain-string-compare" title="Permanent link">¶</a></h2>
+<p>The gentlest phase. It hands your input and a fixed pointer to <code>strings_not_equal</code> (which, like <code>strcmp</code>, returns <code>0</code> when the two strings are equal) and explodes unless the result is zero:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0x402400</span><span class="p">,</span><span class="nv">%esi</span><span class="w">          </span><span class="c1">; arg2 = a fixed string in .rodata</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nf">callq</span><span class="w">  </span><span class="no">strings_not_equal</span><span class="w">       </span><span class="c1">; %eax = 0 iff input == that string</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nf">test</span><span class="w">   </span><span class="nv">%eax</span><span class="p">,</span><span class="nv">%eax</span><span class="w">               </span><span class="c1">; set flags from %eax</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nf">je</span><span class="w">     </span><span class="mi">400</span><span class="no">ef7</span><span class="w">                  </span><span class="c1">; %eax == 0 -&gt; jump past the bomb</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nf">callq</span><span class="w">  </span><span class="no">explode_bomb</span><span class="w">            </span><span class="c1">; ...otherwise, boom</span>
+</span></code></pre></div>
+<p>So survival means <code>strings_not_equal</code> returns <code>0</code>, i.e. your line <strong>equals the string at <code>0x402400</code></strong>. There's nothing to compute — just read that address in GDB:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>(gdb) x/s 0x402400
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>0x402400: &quot;Border relations with Canada have never been better.&quot;
+</span></code></pre></div>
+<blockquote>
+<p><strong><code>Border relations with Canada have never been better.</code></strong></p>
+</blockquote>
+<h2 id="phase-2-a-loop-over-six-numbers">Phase 2 · a loop over six numbers<a class="headerlink" href="#phase-2-a-loop-over-six-numbers" title="Permanent link">¶</a></h2>
+<p><code>read_six_numbers</code> parses six integers onto the stack. Two checks follow. First, the very first number is pinned to <code>1</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nf">callq</span><span class="w">  </span><span class="no">read_six_numbers</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nf">cmpl</span><span class="w">   </span><span class="no">$0x1</span><span class="p">,(</span><span class="nv">%rsp</span><span class="p">)</span><span class="w">             </span><span class="c1">; numbers[0] must be 1</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nf">je</span><span class="w">     </span><span class="mi">400</span><span class="no">f30</span><span class="w">                  </span><span class="c1">; ok -&gt; enter the loop setup</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nf">callq</span><span class="w">  </span><span class="no">explode_bomb</span>
+</span></code></pre></div>
+<p>Then a loop walks the array with <code>%rbx</code> (a moving pointer) up to <code>%rbp</code> (one past the end), checking that each element is <strong>twice</strong> its predecessor — <code>add %eax,%eax</code> is just <code>%eax * 2</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nf">mov</span><span class="w">    </span><span class="mi">-0</span><span class="no">x4</span><span class="p">(</span><span class="nv">%rbx</span><span class="p">),</span><span class="nv">%eax</span><span class="w">         </span><span class="c1">; eax = previous element</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nf">add</span><span class="w">    </span><span class="nv">%eax</span><span class="p">,</span><span class="nv">%eax</span><span class="w">               </span><span class="c1">; eax = previous * 2</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nf">cmp</span><span class="w">    </span><span class="nv">%eax</span><span class="p">,(</span><span class="nv">%rbx</span><span class="p">)</span><span class="w">             </span><span class="c1">; current == previous * 2 ?</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nf">jne</span><span class="w">    </span><span class="no">...</span><span class="w"> </span><span class="no">explode</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nf">add</span><span class="w">    </span><span class="no">$0x4</span><span class="p">,</span><span class="nv">%rbx</span><span class="w">               </span><span class="c1">; advance to the next int</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nf">cmp</span><span class="w">    </span><span class="nv">%rbp</span><span class="p">,</span><span class="nv">%rbx</span><span class="w">               </span><span class="c1">; reached the end?</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nf">jne</span><span class="w">    </span><span class="no">...</span><span class="w"> </span><span class="p">(</span><span class="no">loop</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Starting from <code>1</code> and doubling five times gives a geometric sequence:</p>
+<blockquote>
+<p><strong><code>1 2 4 8 16 32</code></strong></p>
+</blockquote>
+<h2 id="phase-3-a-switch-jump-table">Phase 3 · a switch / jump table<a class="headerlink" href="#phase-3-a-switch-jump-table" title="Permanent link">¶</a></h2>
+<p>Here <code>sscanf</code> reads <strong>two</strong> integers (its format string lives at <code>0x4025cf</code> — inspect it and you'll see <code>"%d %d"</code>). The return value, the count of items parsed, must be at least <code>2</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nf">lea</span><span class="w">    </span><span class="mi">0x8</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span><span class="nv">%rdx</span><span class="w">          </span><span class="c1">; &amp;first</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nf">lea</span><span class="w">    </span><span class="mi">0xc</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span><span class="nv">%rcx</span><span class="w">          </span><span class="c1">; &amp;second</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0x4025cf</span><span class="p">,</span><span class="nv">%esi</span><span class="w">          </span><span class="c1">; &quot;%d %d&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nf">callq</span><span class="w">  </span><span class="no">sscanf</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nf">cmp</span><span class="w">    </span><span class="no">$0x1</span><span class="p">,</span><span class="nv">%eax</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nf">jg</span><span class="w">     </span><span class="mi">400</span><span class="no">f6a</span><span class="w">                  </span><span class="c1">; parsed &gt; 1 value -&gt; continue</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nf">callq</span><span class="w">  </span><span class="no">explode_bomb</span>
+</span></code></pre></div>
+<p>The first number selects a branch through a <strong>jump table</strong> — the shape a <code>switch</code> takes once compiled. It is bounded to <code>0–7</code>, then used to index a table of code addresses at <code>0x402470</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nf">cmpl</span><span class="w">   </span><span class="no">$0x7</span><span class="p">,</span><span class="mi">0x8</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">)</span><span class="w">          </span><span class="c1">; first must be &lt;= 7 (unsigned compare)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nf">ja</span><span class="w">     </span><span class="no">...</span><span class="w"> </span><span class="no">explode</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nf">mov</span><span class="w">    </span><span class="mi">0x8</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span><span class="nv">%eax</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nf">jmpq</span><span class="w">   </span><span class="p">*</span><span class="mi">0x402470</span><span class="p">(,</span><span class="nv">%rax</span><span class="p">,</span><span class="mi">8</span><span class="p">)</span><span class="w">      </span><span class="c1">; goto table[first]</span>
+</span></code></pre></div>
+<p>Each case loads a constant into <code>%eax</code>, and the final check demands the <strong>second</strong> number equal it. (Dump the table itself with <code>x/8a 0x402470</code> to read every case's target address.) Following the entry for <code>first = 1</code> lands on:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0x137</span><span class="p">,</span><span class="nv">%eax</span><span class="w">             </span><span class="c1">; case 1 -&gt; 0x137 (= 311)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nf">cmp</span><span class="w">    </span><span class="mi">0xc</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span><span class="nv">%eax</span><span class="w">          </span><span class="c1">; second == 311 ?</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nf">je</span><span class="w">     </span><span class="no">...</span><span class="w"> </span><span class="no">defused</span>
+</span></code></pre></div>
+<p>Any of the eight cases yields a valid answer; taking case <code>1</code>:</p>
+<blockquote>
+<p><strong><code>1 311</code></strong></p>
+</blockquote>
+<h2 id="phase-4-a-recursive-function">Phase 4 · a recursive function<a class="headerlink" href="#phase-4-a-recursive-function" title="Permanent link">¶</a></h2>
+<p><code>sscanf</code> again reads two integers; this time <em>exactly</em> two, and the first is capped at <code>14</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nf">cmp</span><span class="w">    </span><span class="no">$0x2</span><span class="p">,</span><span class="nv">%eax</span><span class="w">               </span><span class="c1">; exactly two values parsed</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nf">jne</span><span class="w">    </span><span class="no">...</span><span class="w"> </span><span class="no">explode</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nf">cmpl</span><span class="w">   </span><span class="no">$0xe</span><span class="p">,</span><span class="mi">0x8</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">)</span><span class="w">          </span><span class="c1">; first &lt;= 14</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nf">jbe</span><span class="w">    </span><span class="no">...</span><span class="w"> </span><span class="no">continue</span>
+</span></code></pre></div>
+<p>The first number is passed to <code>func4(first, 0, 14)</code>, whose result must be <code>0</code>, and the second number must also be <code>0</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0xe</span><span class="p">,</span><span class="nv">%edx</span><span class="w">               </span><span class="c1">; hi = 14</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0x0</span><span class="p">,</span><span class="nv">%esi</span><span class="w">               </span><span class="c1">; lo = 0</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nf">mov</span><span class="w">    </span><span class="mi">0x8</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span><span class="nv">%edi</span><span class="w">          </span><span class="c1">; x = first</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nf">callq</span><span class="w">  </span><span class="no">func4</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nf">test</span><span class="w">   </span><span class="nv">%eax</span><span class="p">,</span><span class="nv">%eax</span><span class="w">               </span><span class="c1">; func4 must return 0</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nf">jne</span><span class="w">    </span><span class="no">...</span><span class="w"> </span><span class="no">explode</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nf">cmpl</span><span class="w">   </span><span class="no">$0x0</span><span class="p">,</span><span class="mi">0xc</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">)</span><span class="w">          </span><span class="c1">; second == 0</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nf">je</span><span class="w">     </span><span class="no">...</span><span class="w"> </span><span class="no">defused</span>
+</span></code></pre></div>
+<p><code>func4</code> is a <strong>binary search</strong> over <code>[lo, hi]</code>. It computes the midpoint (the <code>shr</code>/<code>sar</code> pair is just a signed divide-by-two that rounds toward zero), then recurses into one half — doubling the running result on the way back:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nf">mov</span><span class="w">    </span><span class="nv">%edx</span><span class="p">,</span><span class="nv">%eax</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nf">sub</span><span class="w">    </span><span class="nv">%esi</span><span class="p">,</span><span class="nv">%eax</span><span class="w">               </span><span class="c1">; hi - lo</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="na">...</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nf">sar</span><span class="w">    </span><span class="nv">%eax</span><span class="w">                    </span><span class="c1">; (hi-lo)/2</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nf">lea</span><span class="w">    </span><span class="p">(</span><span class="nv">%rax</span><span class="p">,</span><span class="nv">%rsi</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="nv">%ecx</span><span class="w">      </span><span class="c1">; mid = lo + (hi-lo)/2</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="nf">cmp</span><span class="w">    </span><span class="nv">%edi</span><span class="p">,</span><span class="nv">%ecx</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nf">jle</span><span class="w">    </span><span class="mi">400</span><span class="no">ff2</span><span class="w">                  </span><span class="c1">; mid &lt;= x ? ...</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="nf">lea</span><span class="w">    </span><span class="mi">-0</span><span class="no">x1</span><span class="p">(</span><span class="nv">%rcx</span><span class="p">),</span><span class="nv">%edx</span><span class="w">         </span><span class="c1">; x &lt; mid -&gt; recurse on [lo, mid-1], result = 2*r</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="na">...</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="nf">lea</span><span class="w">    </span><span class="mi">0x1</span><span class="p">(</span><span class="nv">%rcx</span><span class="p">),</span><span class="nv">%esi</span><span class="w">          </span><span class="c1">; x &gt; mid -&gt; recurse on [mid+1, hi], result = 2*r+1</span>
+</span></code></pre></div>
+<p>The result stays <code>0</code> only along a path that never takes the <code>2*r + 1</code> (go-right) branch — i.e. <code>x</code> is found at a midpoint reached by going left, left, ... With <code>lo=0, hi=14</code> the first midpoint is <code>7</code>, and the values that return <code>0</code> are <code>{0, 1, 3, 7}</code>.</p>
+<p>Trace <code>x = 1</code> to see why: <code>mid = (0+14)/2 = 7</code>, and <code>1 &lt; 7</code>, so recurse left on <code>[0, 6]</code> (result <code>= 2*r</code>); <code>mid = 3</code>, <code>1 &lt; 3</code>, left on <code>[0, 2]</code>; <code>mid = 1</code> → match, <code>r = 0</code>. Every step went left, so the doublings keep it at <code>2*(2*(2*0)) = 0</code>. Take <code>1</code>, and pair it with the required second <code>0</code>:</p>
+<blockquote>
+<p><strong><code>1 0</code></strong> — and note what appending <code>DrEvil</code> here unlocks in the <a href="#the-secret-phase">secret phase</a>.</p>
+</blockquote>
+<h2 id="phase-5-a-table-lookup-cipher">Phase 5 · a table-lookup cipher<a class="headerlink" href="#phase-5-a-table-lookup-cipher" title="Permanent link">¶</a></h2>
+<p>The input must be <strong>6 characters</strong> long. Then each character is transformed and the six results must spell a target word. The transform: mask a character down to its <strong>low 4 bits</strong>, and use that as an index into a 16-byte table at <code>0x4024b0</code> — the string <code>"maduiersnfotvbyl"</code> (peek with <code>x/s 0x4024b0</code>):</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nf">movzbl</span><span class="w"> </span><span class="p">(</span><span class="nv">%rbx</span><span class="p">,</span><span class="nv">%rax</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="nv">%ecx</span><span class="w">      </span><span class="c1">; ecx = input[i]</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nf">and</span><span class="w">    </span><span class="no">$0xf</span><span class="p">,</span><span class="nv">%edx</span><span class="w">               </span><span class="c1">; keep the low nibble</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nf">movzbl</span><span class="w"> </span><span class="mi">0x4024b0</span><span class="p">(</span><span class="nv">%rdx</span><span class="p">),</span><span class="nv">%edx</span><span class="w">     </span><span class="c1">; edx = table[nibble]</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nf">mov</span><span class="w">    </span><span class="nv">%dl</span><span class="p">,</span><span class="mi">0x10</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">,</span><span class="nv">%rax</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="w">    </span><span class="c1">; append to the result buffer</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="na">...</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0x40245e</span><span class="p">,</span><span class="nv">%esi</span><span class="w">          </span><span class="c1">; target = &quot;flyers&quot;</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="nf">callq</span><span class="w">  </span><span class="no">strings_not_equal</span>
+</span></code></pre></div>
+<p>So the puzzle is: pick six bytes whose low nibbles index the letters of <code>"flyers"</code>. Reading the table, those letters sit at indices <code>9, 15, 14, 5, 6, 7</code>. Any characters with those low nibbles work — a printable set is one per column:</p>
+<table>
+<thead>
+<tr>
+<th>target letter</th>
+<th><code>f</code></th>
+<th><code>l</code></th>
+<th><code>y</code></th>
+<th><code>e</code></th>
+<th><code>r</code></th>
+<th><code>s</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>table index (= low nibble needed)</td>
+<td>9</td>
+<td>15</td>
+<td>14</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+</tr>
+<tr>
+<td>a printable char with that low nibble</td>
+<td><code>)</code> <code>0x29</code></td>
+<td><code>/</code> <code>0x2f</code></td>
+<td><code>.</code> <code>0x2e</code></td>
+<td><code>%</code> <code>0x25</code></td>
+<td><code>&amp;</code> <code>0x26</code></td>
+<td><code>'</code> <code>0x27</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong><code>)/.%&amp;'</code></strong></p>
+</blockquote>
+<h2 id="phase-6-reordering-a-linked-list">Phase 6 · reordering a linked list<a class="headerlink" href="#phase-6-reordering-a-linked-list" title="Permanent link">¶</a></h2>
+<p>The hardest of the six, and worth taking slowly. It reads six numbers and enforces two properties: each is in <code>1–6</code>, and all are <strong>distinct</strong> (a nested loop compares every pair):</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nf">mov</span><span class="w">    </span><span class="mi">0x0</span><span class="p">(</span><span class="nv">%r13</span><span class="p">),</span><span class="nv">%eax</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nf">sub</span><span class="w">    </span><span class="no">$0x1</span><span class="p">,</span><span class="nv">%eax</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nf">cmp</span><span class="w">    </span><span class="no">$0x5</span><span class="p">,</span><span class="nv">%eax</span><span class="w">               </span><span class="c1">; (value - 1) &lt;= 5  -&gt; value in 1..6</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nf">jbe</span><span class="w">    </span><span class="no">...</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="na">...</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="nf">cmp</span><span class="w">    </span><span class="nv">%eax</span><span class="p">,</span><span class="mi">0x0</span><span class="p">(</span><span class="nv">%rbp</span><span class="p">)</span><span class="w">          </span><span class="c1">; compare against every other value</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nf">jne</span><span class="w">    </span><span class="no">...</span><span class="w">                     </span><span class="c1">; must differ -&gt; distinct</span>
+</span></code></pre></div>
+<p>Next it maps every value <code>x</code> to <code>7 - x</code>, and uses those to index into a six-node <strong>linked list</strong> in <code>.data</code> (each node is <code>{ int value; int pad; node *next; }</code>). It threads the nodes into the order your numbers specify, then verifies that order is <strong>descending by node value</strong>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0x7</span><span class="p">,</span><span class="nv">%ecx</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nf">sub</span><span class="w">    </span><span class="p">(</span><span class="nv">%rax</span><span class="p">),</span><span class="nv">%edx</span><span class="w">             </span><span class="c1">; 7 - each input</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="na">...</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nf">mov</span><span class="w">    </span><span class="mi">0x8</span><span class="p">(</span><span class="nv">%rdx</span><span class="p">),</span><span class="nv">%rdx</span><span class="w">          </span><span class="c1">; follow -&gt;next to the chosen node</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="na">...</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="nf">mov</span><span class="w">    </span><span class="mi">0x8</span><span class="p">(</span><span class="nv">%rbx</span><span class="p">),</span><span class="nv">%rax</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="nf">mov</span><span class="w">    </span><span class="p">(</span><span class="nv">%rax</span><span class="p">),</span><span class="nv">%eax</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="nf">cmp</span><span class="w">    </span><span class="nv">%eax</span><span class="p">,(</span><span class="nv">%rbx</span><span class="p">)</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nf">jge</span><span class="w">    </span><span class="no">...</span><span class="w">                     </span><span class="c1">; node.value &gt;= next.value -&gt; descending</span>
+</span></code></pre></div>
+<p>So the recipe is: read the six node values, sort them <strong>descending</strong>, note each one's original position, and emit <code>7 - position</code>. Dumping the list (<code>x/12xw 0x6032d0</code> shows each node's value and <code>next</code>) gives values <code>{0x14c, 0xa8, 0x39c, 0x2b3, 0x1dd, 0x1bb}</code> for nodes <code>1...6</code>; sorted high-to-low that's nodes <code>3 &gt; 4 &gt; 5 &gt; 6 &gt; 1 &gt; 2</code>. Applying <code>7 - position</code> term by term — <code>7-3, 7-4, 7-5, 7-6, 7-1, 7-2</code>:</p>
+<blockquote>
+<p><strong><code>4 3 2 1 6 5</code></strong></p>
+</blockquote>
+<hr />
+<h2 id="the-secret-phase">The secret phase<a class="headerlink" href="#the-secret-phase" title="Permanent link">¶</a></h2>
+<p>There's a seventh phase, and finding it is half the puzzle. After all six are defused, <code>phase_defused</code> quietly re-parses the line you gave <strong>phase 4</strong> — this time as <code>"%d %d %s"</code> — and checks whether the trailing word is <code>"DrEvil"</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nf">mov</span><span class="w">    </span><span class="no">$0x402622</span><span class="p">,</span><span class="nv">%esi</span><span class="w">          </span><span class="c1">; &quot;DrEvil&quot;</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nf">lea</span><span class="w">    </span><span class="mi">0x10</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span><span class="nv">%rdi</span><span class="w">         </span><span class="c1">; the %s captured from phase 4&#39;s line</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nf">callq</span><span class="w">  </span><span class="no">strings_not_equal</span><span class="w">       </span><span class="c1">; match -&gt; call secret_phase</span>
+</span></code></pre></div>
+<p>So phase 4's answer grows a third token: <strong><code>1 0 DrEvil</code></strong>. The secret phase then reads one integer (<code>1 &lt;= n &lt;= 1001</code>, from a <code>(n-1) &lt;= 0x3e8</code> check) and calls <code>fun7</code> on a binary search tree rooted at <code>0x6030f0</code>; the return value must be exactly <code>2</code>:</p>
+<div class="language-asm highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nf">mov</span><span class="w">    </span><span class="p">(</span><span class="nv">%rdi</span><span class="p">),</span><span class="nv">%edx</span><span class="w">             </span><span class="c1">; node value</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nf">cmp</span><span class="w">    </span><span class="nv">%esi</span><span class="p">,</span><span class="nv">%edx</span><span class="w">               </span><span class="c1">; compare with input n</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nf">jle</span><span class="w">    </span><span class="no">...</span><span class="w">                     </span><span class="c1">; n &lt; node -&gt; left  child (0x8),  return 2*fun7</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">                               </span><span class="c1">; n &gt; node -&gt; right child (0x10), return 2*fun7 + 1</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">                               </span><span class="c1">; n == node -&gt; return 0</span>
+</span></code></pre></div>
+<p><code>fun7</code> <strong>encodes the path it walks</strong> into its return value: each step left multiplies by <code>2</code>, each step right does <code>2·r + 1</code>, and a match returns <code>0</code>. Read backward, a result of <code>2</code> factors uniquely as <code>2 = 2·(2·0 + 1)</code> — that is, <em>left, then right, then a match</em>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>   fun7 walks a BST; each step folds into the return value:
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>       n &lt;  node  -&gt;  go left,   return 2*r
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>       n &gt;  node  -&gt;  go right,  return 2*r + 1
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>       n == node  -&gt;  match,     return 0
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>   Want return = 2.  Factor it to read the path back off:
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>       2  =  2 * ( 2*0 + 1 )
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>       |        |      `-- match          -&gt; 0
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>       |        `--------- step RIGHT     -&gt; 2*0 + 1
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>       `------------------ step LEFT      -&gt; 2*1
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>   So the path is  left, then right, then match:
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>          root (0x6030f0)
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>          /
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>       node               (n &lt; root  -&gt; left)
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a>          \
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a>         [ 22 ]           (n &gt; node  -&gt; right, and n == 22 -&gt; match)
+</span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a>
+</span><span id="__span-15-21"><a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a>   =&gt;  n = the value at  root -&gt; left -&gt; right  =  22
+</span></code></pre></div>
+<p>So <code>n</code> must equal the value stored at <em>root -&gt; left -&gt; right</em>, which is <code>22</code> — the one number that threads exactly the <code>left, right, match</code> path:</p>
+<blockquote>
+<p><strong><code>22</code></strong></p>
+</blockquote>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../data-lab/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Data Lab">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Data Lab
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../attack-lab/" class="md-footer__link md-footer__link--next" aria-label="Next: Attack Lab">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Attack Lab
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 2026 Xiang Li · Built with ❤ and MkDocs Material
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx" target="_blank" rel="noopener" title="GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.instant.prefetch", "navigation.tracking", "navigation.top", "navigation.footer", "navigation.indexes", "toc.follow", "content.code.copy", "content.tooltips", "search.suggest", "search.highlight", "search.share"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
