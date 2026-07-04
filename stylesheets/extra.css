@@ -520,7 +520,7 @@ html { scroll-behavior: smooth; }
 }
 .md-typeset .md-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--md-primary-fg-color) 16%, transparent);
 }
 
 /* Card grid */
@@ -538,10 +538,10 @@ html { scroll-behavior: smooth; }
   transition: transform .18s ease, box-shadow .22s ease, border-color .22s ease, background-color .22s ease;
 }
 .md-typeset .grid.cards > :is(ul, ol) > li:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--md-primary-fg-color) 45%, transparent);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--md-primary-fg-color) 40%, transparent);
   background: color-mix(in srgb, var(--md-primary-fg-color) 2.5%, var(--card-bg));
-  box-shadow: 0 10px 26px color-mix(in srgb, var(--md-default-fg-color) 12%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--md-default-fg-color) 10%, transparent);
 }
 .md-typeset .grid.cards > :is(ul, ol) > li { font-size: 0.8rem; line-height: 1.65; }
 
