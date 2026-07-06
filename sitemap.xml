@@ -2,34 +2,38 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
     </url>
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/attack-lab/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
     </url>
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/bomb-lab/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
     </url>
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/cache-lab/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
     </url>
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/data-lab/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
     </url>
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/malloc-lab/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
     </url>
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/proxy-lab/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
+    </url>
+    <url>
+         <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/sfs-lab/</loc>
+         <lastmod>2026-07-06</lastmod>
     </url>
     <url>
          <loc>https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/shell-lab/</loc>
-         <lastmod>2026-07-04</lastmod>
+         <lastmod>2026-07-06</lastmod>
     </url>
 </urlset>

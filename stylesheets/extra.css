@@ -612,6 +612,11 @@ html { scroll-behavior: smooth; }
   border-color: color-mix(in srgb, #b5643f 34%, transparent);
   color: #a1502e;
 }
+.pill--dev {
+  background: color-mix(in srgb, #52657d 9%, transparent);
+  border-color: color-mix(in srgb, #52657d 30%, transparent);
+  color: #4f6178;
+}
 [data-md-color-scheme="slate"] .pill--done {
   background: color-mix(in srgb, #7bc98a 10%, transparent);
   border-color: color-mix(in srgb, #7bc98a 30%, transparent);
@@ -621,6 +626,11 @@ html { scroll-behavior: smooth; }
   background: color-mix(in srgb, #e6a074 10%, transparent);
   border-color: color-mix(in srgb, #e6a074 30%, transparent);
   color: #e6a074;
+}
+[data-md-color-scheme="slate"] .pill--dev {
+  background: color-mix(in srgb, #8fa9c4 10%, transparent);
+  border-color: color-mix(in srgb, #8fa9c4 30%, transparent);
+  color: #8fa9c4;
 }
 
 /* ── Article masthead — meta line under the title ──────────────────────────*/
