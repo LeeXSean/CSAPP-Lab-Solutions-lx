@@ -1113,7 +1113,7 @@
 <p>"Read all eight into registers" and "don't touch the conflicting line until the row is done" are two answers to the same eviction, and the cache can't tell them apart: run through <code>csim-ref</code>, this version scores <strong>288 misses — hits, misses, and evictions all identical to the submission</strong>. Same score, an eighth of the temporaries; it just was never wired into <code>registerFunctions</code>, so the driver never saw it.</p>
 <h3 id="6464-the-four-quadrant-shuffle">64×64 — the four-quadrant shuffle<a class="headerlink" href="#6464-the-four-quadrant-shuffle" title="Permanent link">¶</a></h3>
 <p>Here <code>8×8</code> blocking self-destructs: within a tile, rows <code>k</code> and <code>k+4</code> conflict. The fix is to treat each <code>8×8</code> tile as <strong>four <code>4×4</code> quadrants</strong> and use <code>B</code>'s own upper-right quadrant as a scratch buffer, so data is staged in cache-friendly <code>4×4</code> pieces:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>   8×8 tile (each quadrant is 4×4)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>   8x8 tile (each quadrant is 4x4)
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>   +--------+--------+
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>   |  (1)   |  (2)   |
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>   +--------+--------+
