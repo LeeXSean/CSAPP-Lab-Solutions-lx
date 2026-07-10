@@ -873,7 +873,7 @@
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   BG  -- fg --&gt;  FG
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   - a new command starts a job as FG, or as BG if it ends in &#39;&amp;&#39;
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   - when a FG or BG job exits or is killed, it leaves the job list
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   - when any job exits or is killed, it leaves the job list
 </span></code></pre></div>
 <p>Only a foreground job blocks the prompt; background and stopped jobs live on in the job list until they finish.</p>
 <hr />
@@ -910,21 +910,23 @@
 <li>Put the child in its <strong>own process group</strong> (<code>setpgid(0,0)</code>). Now <code>kill(-pid, ...)</code> targets exactly this job — so Ctrl-C at the keyboard hits the foreground job's group, not the shell.</li>
 <li>The child restores the original mask before <code>execve</code>, so the new program starts with a clean, unblocked signal state.</li>
 <li>Parent blocks <strong>all</strong> signals while it touches the shared job list — the handler also does this, so the two never corrupt <code>jobs</code> concurrently.</li>
-<li>Restore the original mask, re-opening <code>SIGCHLD</code>. Crucially, <code>SIGCHLD</code> stayed blocked across the <em>entire</em> <code>fork</code> → <code>addjob</code> window.</li>
+<li>The two paths reach this restore differently. A <strong>background</strong> job restores <code>prev_one</code> immediately after insertion and printing. A <strong>foreground</strong> job first enters <code>waitfg</code>, where <code>sigsuspend</code> temporarily opens the controlled window for <code>SIGCHLD</code>; only after that job exits or stops does <code>eval</code> reach this line. Either way, <code>SIGCHLD</code> stays blocked across the entire <code>fork</code> → <code>addjob</code> window.</li>
 </ol>
 <h3 id="the-race-this-prevents">The race this prevents<a class="headerlink" href="#the-race-this-prevents" title="Permanent link">¶</a></h3>
 <p>Why block <code>SIGCHLD</code> before <code>fork</code> rather than after <code>addjob</code>? Because a short-lived child can <strong>die before the parent gets scheduled again</strong>. If <code>SIGCHLD</code> were deliverable then, the handler would run <code>deletejob(pid)</code> for a job that <code>addjob</code> has not yet inserted — the delete is a no-op, and the job leaks into the list forever.</p>
 <p>Blocking <code>SIGCHLD</code> until after <code>addjob</code> forces the only correct order — <em>insert, then reap</em>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>   parent (tsh)                           child / kernel
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>   -------------                          --------------
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>   sigprocmask BLOCK SIGCHLD
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>   fork()  -----------------------------&gt; child: setpgid, unblock, execve
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                                           child exits  -&gt;  SIGCHLD pending
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>   SIGCHLD blocked, so delivery waits              |
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>   addjob(pid)      (inserted first)               |
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>   sigprocmask UNBLOCK                             |
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        &lt;------------ deliver SIGCHLD -------------+
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>   sigchld_handler -&gt; deletejob    (job already registered: no leak)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>   parent (tsh)                              child / kernel
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>   -------------                             --------------
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>   block SIGCHLD
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>   fork()  ---------------------&gt; child: setpgid; restore mask
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                                  execve; exit -&gt; SIGCHLD pending
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>   SIGCHLD remains blocked                              |
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>   block all signals; addjob(pid)                       |
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>   allow SIGCHLD only after insertion:                  |
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>     FG: waitfg -&gt; sigsuspend(empty)                    |
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>     BG: restore previous mask                          |
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        &lt;--------------- deliver SIGCHLD ---------------+
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>   sigchld_handler -&gt; deletejob  (job already registered: no leak)
 </span></code></pre></div>
 <h2 id="waitfg-sigsuspend-not-a-spin-loop">waitfg: sigsuspend, not a spin loop<a class="headerlink" href="#waitfg-sigsuspend-not-a-spin-loop" title="Permanent link">¶</a></h2>
 <p>A foreground job must block the prompt until it exits or is stopped. The tempting <code>while (fg) ;</code> busy-loop burns a core; <code>while (fg) pause();</code> has a fatal race (the child can exit between the <code>fg</code> test and <code>pause</code>, and then <code>pause</code> sleeps forever). The correct primitive is <code>sigsuspend</code>, which <strong>atomically</strong> installs a mask and waits:</p>

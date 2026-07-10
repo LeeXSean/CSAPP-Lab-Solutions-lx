@@ -861,16 +861,18 @@
 <p>And one small but fatal detail: <strong>ignore <code>SIGPIPE</code></strong>. Writing to a connection the peer already closed raises it, and the default action kills the whole proxy — so it must be handled or ignored.</p>
 <h2 id="stage-3-the-cache-shared-safely">Stage 3 · The cache, shared safely<a class="headerlink" href="#stage-3-the-cache-shared-safely" title="Permanent link">¶</a></h2>
 <p>The cache maps a request URL to a stored response object, bounded in per-object and total size, with LRU eviction. The subtlety is that it is shared across all the threads from stage 2, so access must be synchronized — but it is <strong>read-mostly</strong>, so a plain mutex (which would serialize even concurrent readers) wastes the concurrency we just built.</p>
-<p>The fit is a <strong>reader–writer</strong> discipline: any number of readers may look up the cache at once, but a writer (inserting or evicting) needs exclusive access.</p>
+<p>The intended fit for the stored objects is a <strong>reader–writer</strong> discipline: any number of readers may copy cached bytes at once, but a writer (inserting or evicting) needs exclusive access.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>   reader --.
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>   reader --+--  shared read (concurrent)  --&gt;  +-------+
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>   reader --&#39;                                   | cache |
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>                                                +-------+
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>   writer ------  exclusive (insert / evict) --&gt;  locks everyone else out
 </span></code></pre></div>
+<p>One wrinkle: a strict LRU hit is not completely read-only, because it must update that entry's recency. The final implementation must keep that metadata update out of the shared-read section — either record a timestamp atomically (or under a short metadata lock), or take the write side for the hit. Relinking an LRU list while holding only a read lock would race.</p>
 <p>The intended shape:</p>
 <ul>
-<li><strong>Lookup (reader):</strong> acquire the read side, scan for the URL, copy out the object on a hit, release.</li>
+<li><strong>Lookup (reader):</strong> acquire the read side, scan for the URL, copy out the object, and — if recency is an atomic timestamp — update it before releasing. Send only after the object has been copied out.</li>
+<li><strong>Non-atomic LRU:</strong> treat the hit as a writer from the outset; never relink or mutate shared recency state under a read lock.</li>
 <li><strong>Store (writer):</strong> acquire the write side, evict LRU entries until the new object fits, insert, release.</li>
 <li>Guard against the classic reader–writer <strong>writer starvation</strong>, and copy hits <em>out</em> under the lock so a concurrent eviction can't free the buffer mid-send.</li>
 </ul>
