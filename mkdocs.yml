@@ -1,0 +1,116 @@
+# ── Site ────────────────────────────────────────────────────────────────────
+site_name: CS:APP Lab Notes
+site_author: Xiang Li
+site_description: Source-backed walkthroughs of the CMU 15-213 / CS:APP labs, checked against the graders.
+site_url: https://leexsean.github.io/CSAPP-Lab-Solutions-lx/
+copyright: © 2026 Xiang Li
+
+repo_url: https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx
+repo_name: LeeXSean/CSAPP-Lab-Solutions-lx
+edit_uri: ""
+
+# ── Theme ───────────────────────────────────────────────────────────────────
+theme:
+  name: material
+  language: en
+  font: false
+  custom_dir: docs/overrides
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.instant.prefetch
+    - navigation.tracking
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.tooltips
+    - search.suggest
+    - search.highlight
+    - search.share
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  favicon: assets/favicon.svg
+  icon:
+    logo: material/memory
+    repo: fontawesome/brands/github
+    annotation: material/circle-medium
+
+# ── Plugins ─────────────────────────────────────────────────────────────────
+plugins:
+  - search
+
+# ── Markdown extensions ─────────────────────────────────────────────────────
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: ¶
+      toc_depth: 3
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.smartsymbols
+
+# ── Assets ──────────────────────────────────────────────────────────────────
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx
+      name: GitHub
+
+# ── Navigation ──────────────────────────────────────────────────────────────
+nav:
+  - index.md
+  - Labs:
+      - labs/data-lab.md
+      - labs/bomb-lab.md
+      - labs/attack-lab.md
+      - labs/cache-lab.md
+      - labs/shell-lab.md
+      - labs/malloc-lab.md
+      - labs/proxy-lab.md
+      - labs/sfs-lab.md

@@ -1,0 +1,10 @@
+# Python / MkDocs
+.venv/
+site/
+__pycache__/
+*.pyc
+.cache/
+
+# Editor / local tooling
+.vscode/
+.DS_Store
