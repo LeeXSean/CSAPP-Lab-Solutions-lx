@@ -972,7 +972,7 @@
 <tr>
 <td>Free-block organization</td>
 <td><strong>Segregated</strong> explicit free lists, 12 classes</td>
-<td>Near-<code>O(1)</code> fits without scanning the whole heap</td>
+<td>Search only size-relevant free blocks, never allocated ones</td>
 </tr>
 <tr>
 <td>Allocated-block metadata</td>
@@ -991,13 +991,13 @@
 </tr>
 <tr>
 <td>Fit policy</td>
-<td>First non-empty class, <strong>best fit within it</strong></td>
-<td>Cheap, but tighter than pure first-fit</td>
+<td>First class containing a fit, <strong>best fit within it</strong></td>
+<td>Tighter placement at the cost of one class scan</td>
 </tr>
 <tr>
 <td>Realloc</td>
-<td>Grow <strong>in place</strong> before copying</td>
-<td>Avoids most <code>memcpy</code> traffic</td>
+<td>Reuse adjacent space before allocating a replacement</td>
+<td>Avoids most malloc-copy-free cycles</td>
 </tr>
 </tbody>
 </table>
@@ -1153,7 +1153,7 @@
 <li>Very large requests (&gt; 512) are left exactly as asked — rounding them would waste too much.</li>
 </ol>
 <h3 id="insert-remove-and-the-fit-search">Insert, remove, and the fit search<a class="headerlink" href="#insert-remove-and-the-fit-search" title="Permanent link">¶</a></h3>
-<p>Insertion is <strong>LIFO</strong> at the head of the class list (the just-freed block is the likeliest to still be warm in cache). <code>find_fit</code> then walks from the request's class <strong>upward</strong>, and within the first non-empty class that contains a fit, it keeps scanning for the <strong>smallest</strong> adequate block — a best-fit-within-class that costs almost nothing but tightens utilization:</p>
+<p>Insertion is <strong>LIFO</strong> at the head of the class list (the just-freed block is the likeliest to still be warm in cache). <code>find_fit</code> walks upward from the request's class until it finds one containing a usable block, then scans that circular list for the <strong>smallest</strong> adequate block. The scan is linear in that class's length, but its search space is much smaller than the whole heap:</p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="nf">find_fit</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">asize</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">minSize</span><span class="p">,</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">find_index</span><span class="p">(</span><span class="n">asize</span><span class="p">);</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
@@ -1264,18 +1264,20 @@
 </ol>
 <p>Because free blocks are always merged on the spot, the heap never accumulates runs of tiny adjacent free blocks — the source of most fragmentation.</p>
 <h2 id="realloc-grow-in-place-before-copying">Realloc: grow in place before copying<a class="headerlink" href="#realloc-grow-in-place-before-copying" title="Permanent link">¶</a></h2>
-<p>The naive <code>realloc</code> is "malloc a new block, <code>memcpy</code>, free the old." That copy is expensive and, worse, common. This implementation exhausts every way to satisfy the request <strong>without moving the payload</strong> first, and only copies as a last resort.</p>
+<p>The naive <code>realloc</code> is "malloc a new block, <code>memcpy</code>, free the old." This implementation first tries to reuse the current block or its neighbors. Growing at the heap end or into the next block leaves the payload in place; using the previous block requires <code>memmove</code>, but still avoids allocating a separate replacement. A fresh malloc-copy-free cycle is the final fallback.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>realloc(bp, size)
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>|
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>+- asize &lt;= current size ......... shrink in place, split off the tail
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>|
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>+- must grow -- try, in order:
 </span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>   +- bp is the last block ....... mem_sbrk the shortage, extend in place
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>   +- next free, room to split ... absorb next, leave the remainder free
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>   +- next free, hits heap end ... absorb next + sbrk the rest
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>   +- prev free &amp; big enough ..... memmove into prev, absorb it
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>   +- both neighbors free enough . memmove into prev, absorb both
-</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>   `- none of the above .......... malloc + memcpy + free   (fallback)
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>   +- next free hits heap end,
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>   |  but is still too small ...... absorb next + sbrk the rest
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>   +- next free, room to split ... absorb next, leave the remainder free
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>   +- next free, just enough ..... absorb the whole next block
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>   +- prev free &amp; big enough ..... memmove into prev, absorb it
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>   +- both neighbors free enough . memmove into prev, absorb both
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>   `- none of the above .......... malloc + memcpy + free   (fallback)
 </span></code></pre></div>
 <p>Two touches make this pay off:</p>
 <ul>

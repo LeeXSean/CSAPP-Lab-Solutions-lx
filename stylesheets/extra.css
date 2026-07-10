@@ -482,32 +482,6 @@ html { scroll-behavior: smooth; }
 }
 .hero .hero-actions { margin-top: 1.6rem; display: flex; gap: 0.7rem; flex-wrap: wrap; }
 
-/* Masthead stats strip */
-.hero-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2.4rem;
-  margin-top: 2rem;
-  padding-top: 1.2rem;
-  border-top: 1px solid var(--hairline);
-}
-.hero-stats .stat { display: flex; flex-direction: column; gap: 0.15rem; }
-.hero-stats .stat-num {
-  font-family: var(--serif);
-  font-size: 1.7rem;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--md-default-fg-color);
-}
-.hero-stats .stat-lbl {
-  font-family: var(--sans);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--md-default-fg-color--lighter);
-}
-
 /* Buttons */
 .md-typeset .md-button {
   font-family: var(--sans);
