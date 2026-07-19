@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Designing a caching, concurrent HTTP proxy — sockets, threads, and a reader–writer cache.">
+        <meta name="description" content="A 70/70 concurrent caching HTTP proxy — robust I/O, detached threads, LRU eviction, and reader–writer synchronization.">
       
       
         <meta name="author" content="Xiang Li">
@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -33,7 +33,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#proxy-lab-a-concurrent-web-proxy" class="md-skip">
+        <a href="#proxy-lab-a-concurrent-caching-proxy" class="md-skip">
           Skip to content
         </a>
       
@@ -604,10 +604,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stage-1-a-sequential-proxy" class="md-nav__link">
+  <a href="#stage-1-forward-one-request-correctly" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stage 1 · A sequential proxy
+        Stage 1 · Forward one request correctly
       
     </span>
   </a>
@@ -615,10 +615,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stage-2-making-it-concurrent" class="md-nav__link">
+  <a href="#stage-2-one-detached-thread-per-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stage 2 · Making it concurrent
+        Stage 2 · One detached thread per connection
       
     </span>
   </a>
@@ -626,21 +626,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stage-3-the-cache-shared-safely" class="md-nav__link">
+  <a href="#stage-3-cache-the-response-while-relaying-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stage 3 · The cache, shared safely
+        Stage 3 · Cache the response while relaying it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stage 3 · Cache the response while relaying it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#concurrent-readers-exclusive-writers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concurrent readers, exclusive writers
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#whats-left" class="md-nav__link">
+  <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What's left
+        Verification
       
     </span>
   </a>
@@ -729,10 +746,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stage-1-a-sequential-proxy" class="md-nav__link">
+  <a href="#stage-1-forward-one-request-correctly" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stage 1 · A sequential proxy
+        Stage 1 · Forward one request correctly
       
     </span>
   </a>
@@ -740,10 +757,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stage-2-making-it-concurrent" class="md-nav__link">
+  <a href="#stage-2-one-detached-thread-per-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stage 2 · Making it concurrent
+        Stage 2 · One detached thread per connection
       
     </span>
   </a>
@@ -751,21 +768,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stage-3-the-cache-shared-safely" class="md-nav__link">
+  <a href="#stage-3-cache-the-response-while-relaying-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stage 3 · The cache, shared safely
+        Stage 3 · Cache the response while relaying it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stage 3 · Cache the response while relaying it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#concurrent-readers-exclusive-writers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concurrent readers, exclusive writers
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#whats-left" class="md-nav__link">
+  <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What's left
+        Verification
       
     </span>
   </a>
@@ -789,21 +823,21 @@
 
 
 
-<h1 id="proxy-lab-a-concurrent-web-proxy">Proxy Lab · A Concurrent Web Proxy<a class="headerlink" href="#proxy-lab-a-concurrent-web-proxy" title="Permanent link">¶</a></h1>
-<p class="article-meta">Network programming <span class="dot">·</span> <span class="pill pill--wip">In progress</span> <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/tree/main/Proxy_Lab">Handout</a></p>
+<h1 id="proxy-lab-a-concurrent-caching-proxy">Proxy Lab · A Concurrent Caching Proxy<a class="headerlink" href="#proxy-lab-a-concurrent-caching-proxy" title="Permanent link">¶</a></h1>
+<p class="article-meta">Network programming <span class="dot">·</span> <span class="pill pill--done">70/70</span> <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Proxy_Lab/proxylab-handout/proxy.c">proxy.c</a></p>
 
-<div class="admonition warning">
-<p class="admonition-title">Status: not yet implemented</p>
-<p>This is the course finale, and it's still on my desk — <code>proxy.c</code> currently holds only the skeleton. What follows is the <strong>design</strong> I'm building toward, not a walkthrough of finished code. I'll replace it with a full, annotated implementation once it passes the driver.</p>
+<div class="admonition success">
+<p class="admonition-title">Verified locally</p>
+<p><code>NO_PROXY= no_proxy= ./driver.sh</code> → <strong>70 / 70</strong>: Basic 40/40, Concurrency 15/15, Cache 15/15.</p>
 </div>
-<p>A proxy sits between a browser and the web: it accepts the browser's HTTP request, forwards it to the origin server, and streams the reply back — optionally remembering recent replies so it can answer the next identical request itself. Building one ties together everything the course has taught about <strong>sockets, concurrency, and synchronization</strong>.</p>
+<p>A web proxy has two identities at once: it is a server to the browser and a client to the origin. The finished program accepts HTTP GET requests, rewrites them as HTTP/1.0, relays arbitrary binary responses, handles clients concurrently, and keeps recent responses in a synchronized in-memory cache.</p>
 <div class="admonition abstract">
 <p class="admonition-title">The assignment</p>
-<p>Build the proxy in three escalating stages:</p>
+<p>Build the proxy in three stages:</p>
 <ol>
-<li>A <strong>sequential</strong> proxy that correctly forwards one HTTP GET at a time.</li>
-<li>A <strong>concurrent</strong> proxy that serves many clients simultaneously.</li>
-<li>A <strong>caching</strong> proxy that stores recent objects (≤ 100 KB each, ≤ ~1 MB total) and serves hits without contacting the origin.</li>
+<li>A <strong>sequential</strong> proxy that forwards HTTP GET requests correctly.</li>
+<li>A <strong>concurrent</strong> proxy where a slow origin cannot block every client.</li>
+<li>A <strong>caching</strong> proxy with objects ≤ 100 KiB, total object bytes ≤ 1,049,000, and approximate LRU eviction.</li>
 </ol>
 </div>
 <h2 id="the-request-path">The request path<a class="headerlink" href="#the-request-path" title="Permanent link">¶</a></h2>
@@ -819,71 +853,158 @@
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                                        +---------------+
 </span></code></pre></div>
 <hr />
-<h2 id="stage-1-a-sequential-proxy">Stage 1 · A sequential proxy<a class="headerlink" href="#stage-1-a-sequential-proxy" title="Permanent link">¶</a></h2>
-<p>The backbone is a classic accept loop. For each connection: read and parse the request line, rebuild a clean request for the origin, connect, forward, and relay the response byte-for-byte.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kt">int</span><span class="w"> </span><span class="n">listenfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Open_listenfd</span><span class="p">(</span><span class="n">port</span><span class="p">);</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Accept</span><span class="p">(</span><span class="n">listenfd</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">doit</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span><span class="w">           </span><span class="c1">// parse -&gt; forward -&gt; relay</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">Close</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
+<h2 id="stage-1-forward-one-request-correctly">Stage 1 · Forward one request correctly<a class="headerlink" href="#stage-1-forward-one-request-correctly" title="Permanent link">¶</a></h2>
+<p>For each accepted connection, <code>doit</code> reads the request line, splits the absolute URI into <code>hostname</code>, <code>port</code>, and <code>path</code>, connects to the origin, and relays its response back to the browser.</p>
+<p>The outgoing request is rebuilt instead of copied blindly:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">snprintf</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">request</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;GET %s HTTP/1.0</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">);</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">request</span><span class="p">));</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">snprintf</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">request</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;Host: %s</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">hostname</span><span class="p">);</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">request</span><span class="p">));</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">user_agent_hdr</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">user_agent_hdr</span><span class="p">));</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">            </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">));</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Proxy-Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">            </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;Proxy-Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">));</span>
 </span></code></pre></div>
-<p>The care lives in <code>doit</code>:</p>
-<ul>
-<li><strong>Parse</strong> the request line <code>GET http://host:port/path HTTP/1.1</code>, splitting out host, port, and path.</li>
-<li><strong>Rebuild headers</strong> — force <code>HTTP/1.0</code>, send the required <code>Host</code>, <code>User-Agent</code>, <code>Connection: close</code>, and <code>Proxy-Connection: close</code>, and pass through the rest.</li>
-<li><strong>Relay</strong> the origin's response back to the client with robust I/O, since a response can arrive in arbitrarily sized chunks.</li>
-</ul>
+<p><code>forward_request</code> discards the browser's versions of those four headers, preserves every other header, and writes the final blank line. With <code>Connection: close</code>, EOF cleanly marks the end of the origin response.</p>
 <div class="admonition note">
-<p class="admonition-title">Robust I/O (RIO) is non-negotiable</p>
-<p>Network reads and writes return <em>short counts</em> — fewer bytes than asked — at any moment. Every transfer goes through the CS:APP <code>rio_*</code> buffered wrappers, which loop until the full amount is moved or EOF is reached. A raw <code>read</code>/<code>write</code> here silently truncates pages.</p>
+<p class="admonition-title">Why the response loop uses byte counts</p>
+<p>A response can contain a JPEG or executable, so <code>strlen</code> cannot measure it. <code>Rio_readnb</code> returns the exact number of bytes received; that count is passed unchanged to <code>Rio_writen</code>.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Rio_readnb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">server_rio</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">MAXBUF</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">Rio_writen</span><span class="p">(</span><span class="n">clientfd</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+</span></code></pre></div>
 </div>
-<h2 id="stage-2-making-it-concurrent">Stage 2 · Making it concurrent<a class="headerlink" href="#stage-2-making-it-concurrent" title="Permanent link">¶</a></h2>
-<p>A sequential proxy stalls every client behind the slowest origin. The plan is <strong>one thread per connection</strong>, detached so it cleans up after itself:</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">pthread_t</span><span class="w"> </span><span class="n">tid</span><span class="p">;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">connfdp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span><span class="w">   </span><span class="c1">// (1) heap-per-thread, no shared stack slot</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="o">*</span><span class="n">connfdp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Accept</span><span class="p">(</span><span class="n">listenfd</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">Pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tid</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="kr">thread</span><span class="p">,</span><span class="w"> </span><span class="n">connfdp</span><span class="p">);</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="nf">thread</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">vargp</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">vargp</span><span class="p">;</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="n">Pthread_detach</span><span class="p">(</span><span class="n">pthread_self</span><span class="p">());</span><span class="w">   </span><span class="c1">// (2) auto-reap; no join needed</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="n">Free</span><span class="p">(</span><span class="n">vargp</span><span class="p">);</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="n">doit</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="n">Close</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">}</span>
+<h2 id="stage-2-one-detached-thread-per-connection">Stage 2 · One detached thread per connection<a class="headerlink" href="#stage-2-one-detached-thread-per-connection" title="Permanent link">¶</a></h2>
+<p>A sequential proxy suffers head-of-line blocking: one origin that never replies prevents every later client from being served. The smallest correct concurrent design is one detached worker per accepted connection.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">connfd</span><span class="p">));</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="o">*</span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Accept</span><span class="p">(</span><span class="n">listenfd</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">SA</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">clientaddr</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">clientlen</span><span class="p">);</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="n">Pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tid</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="kr">thread</span><span class="p">,</span><span class="w"> </span><span class="n">connfd</span><span class="p">);</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="kr">thread</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">vargp</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="n">Pthread_detach</span><span class="p">(</span><span class="n">pthread_self</span><span class="p">());</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">vargp</span><span class="p">;</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="n">Free</span><span class="p">(</span><span class="n">vargp</span><span class="p">);</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="n">doit</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="n">Close</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="p">}</span>
 </span></code></pre></div>
-<ol>
-<li>Each thread gets its connection fd through its <strong>own</strong> heap cell — passing <code>&amp;connfd</code> from the loop would race, since the next <code>accept</code> overwrites it.</li>
-<li>Detaching lets the thread release its resources on exit without the main thread having to <code>join</code>.</li>
-</ol>
-<p>And one small but fatal detail: <strong>ignore <code>SIGPIPE</code></strong>. Writing to a connection the peer already closed raises it, and the default action kills the whole proxy — so it must be handled or ignored.</p>
-<h2 id="stage-3-the-cache-shared-safely">Stage 3 · The cache, shared safely<a class="headerlink" href="#stage-3-the-cache-shared-safely" title="Permanent link">¶</a></h2>
-<p>The cache maps a request URL to a stored response object, bounded in per-object and total size, with LRU eviction. The subtlety is that it is shared across all the threads from stage 2, so access must be synchronized — but it is <strong>read-mostly</strong>, so a plain mutex (which would serialize even concurrent readers) wastes the concurrency we just built.</p>
-<p>The intended fit for the stored objects is a <strong>reader–writer</strong> discipline: any number of readers may copy cached bytes at once, but a writer (inserting or evicting) needs exclusive access.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>   reader --.
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>   reader --+--  shared read (concurrent)  --&gt;  +-------+
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>   reader --&#39;                                   | cache |
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>                                                +-------+
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>   writer ------  exclusive (insert / evict) --&gt;  locks everyone else out
+<p>The heap cell is not shared state; it transfers ownership of one descriptor from the accept loop to one worker. Passing <code>&amp;connfd</code> from the loop would race when the next <code>Accept</code> overwrote the same stack slot. Detaching lets the system reclaim the finished thread without a <code>join</code>, and ignoring <code>SIGPIPE</code> prevents a disconnected client from killing the process:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">Signal</span><span class="p">(</span><span class="n">SIGPIPE</span><span class="p">,</span><span class="w"> </span><span class="n">SIG_IGN</span><span class="p">);</span>
 </span></code></pre></div>
-<p>One wrinkle: a strict LRU hit is not completely read-only, because it must update that entry's recency. The final implementation must keep that metadata update out of the shared-read section — either record a timestamp atomically (or under a short metadata lock), or take the write side for the hit. Relinking an LRU list while holding only a read lock would race.</p>
-<p>The intended shape:</p>
-<ul>
-<li><strong>Lookup (reader):</strong> acquire the read side, scan for the URL, copy out the object, and — if recency is an atomic timestamp — update it before releasing. Send only after the object has been copied out.</li>
-<li><strong>Non-atomic LRU:</strong> treat the hit as a writer from the outset; never relink or mutate shared recency state under a read lock.</li>
-<li><strong>Store (writer):</strong> acquire the write side, evict LRU entries until the new object fits, insert, release.</li>
-<li>Guard against the classic reader–writer <strong>writer starvation</strong>, and copy hits <em>out</em> under the lock so a concurrent eviction can't free the buffer mid-send.</li>
-</ul>
-<h2 id="whats-left">What's left<a class="headerlink" href="#whats-left" title="Permanent link">¶</a></h2>
-<ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Sequential <code>doit</code>: request parsing + header rewriting + relay</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Thread-per-connection concurrency + <code>SIGPIPE</code> handling</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Reader–writer cache with LRU eviction</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Pass the <code>driver.sh</code> basic / concurrency / cache checks</li>
-</ul>
-<p>I'll write this section up properly — with the real code and its annotations — once the implementation is done.</p>
+<h2 id="stage-3-cache-the-response-while-relaying-it">Stage 3 · Cache the response while relaying it<a class="headerlink" href="#stage-3-cache-the-response-while-relaying-it" title="Permanent link">¶</a></h2>
+<p>The cache key is the normalized <code>hostname:port/path</code>. Each entry owns an exact-sized copy of both the key and the complete HTTP response:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">cache_object</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">key</span><span class="p">;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">recent</span><span class="p">;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">cache_object</span><span class="w"> </span><span class="o">*</span><span class="n">next</span><span class="p">;</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span><span class="w"> </span><span class="n">cache_object</span><span class="p">;</span>
+</span></code></pre></div>
+<p>Dynamic entries make <code>cache_size</code> mean exactly what the handout specifies: the sum of stored response bytes. Metadata and unused buffer capacity are not counted.</p>
+<table>
+<thead>
+<tr>
+<th>Invariant</th>
+<th>Enforcement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One object ≤ <code>MAX_OBJECT_SIZE</code></td>
+<td>Stop accumulating after 100 KiB, but keep forwarding</td>
+</tr>
+<tr>
+<td>Total objects ≤ <code>MAX_CACHE_SIZE</code></td>
+<td>Evict the least-recent entry until the new object fits</td>
+</tr>
+<tr>
+<td>Binary-safe storage</td>
+<td>Copy each chunk with <code>memcpy(..., n)</code></td>
+</tr>
+<tr>
+<td>Same URL stored once</td>
+<td>Re-check for an existing key while holding the write lock</td>
+</tr>
+</tbody>
+</table>
+<p>On a miss, the ordinary relay loop also accumulates a private candidate object:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Rio_readnb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">server_rio</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">MAXBUF</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">Rio_writen</span><span class="p">(</span><span class="n">clientfd</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cacheable</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">object_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">MAX_OBJECT_SIZE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="n">memcpy</span><span class="p">(</span><span class="n">object</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">object_size</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="n">object_size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">n</span><span class="p">;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="n">cacheable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">}</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cacheable</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">object_size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="n">cache_put</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">object</span><span class="p">,</span><span class="w"> </span><span class="n">object_size</span><span class="p">);</span>
+</span></code></pre></div>
+<p>An oversized response therefore still reaches the client intact; only the optional cache copy is abandoned.</p>
+<h3 id="concurrent-readers-exclusive-writers">Concurrent readers, exclusive writers<a class="headerlink" href="#concurrent-readers-exclusive-writers" title="Permanent link">¶</a></h3>
+<p>The cache is read-mostly, so a single <code>pthread_rwlock_t</code> protects it. Hit lookup takes the read side, allowing many threads to scan and copy cached bytes simultaneously. The copy is local to the worker, so the lock is released before the potentially slow network write:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>read lock → find entry → copy data + size → unlock → send local copy
+</span></code></pre></div>
+<p>Recency is mutable metadata. After copying a hit, <code>cache_get</code> briefly takes the write side, finds the key again, and assigns a monotonically increasing timestamp. This produces an approximate LRU order without mutating the list under a read lock.</p>
+<p>Insertion and eviction stay entirely under the write lock:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cache</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">cache_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">MAX_CACHE_SIZE</span><span class="p">)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">cache_evict_lru</span><span class="p">();</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">object</span><span class="o">-&gt;</span><span class="n">recent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">++</span><span class="n">cache_clock</span><span class="p">;</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">object</span><span class="o">-&gt;</span><span class="n">next</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache</span><span class="p">;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">object</span><span class="p">;</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">cache_size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+</span></code></pre></div>
+<p><code>cache_evict_lru</code> scans the short linked list for the smallest <code>recent</code> timestamp, unlinks that entry, subtracts its byte count, and frees its owned key and response.</p>
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Basic text and binary forwarding</td>
+<td><strong>40/40</strong></td>
+</tr>
+<tr>
+<td>Blocked origin does not block another client</td>
+<td><strong>15/15</strong></td>
+</tr>
+<tr>
+<td>Cached object survives origin shutdown</td>
+<td><strong>15/15</strong></td>
+</tr>
+<tr>
+<td>16 simultaneous hits after origin shutdown</td>
+<td><strong>16/16 identical</strong></td>
+</tr>
+<tr>
+<td>Recently read entry survives capacity eviction</td>
+<td><strong>Pass</strong></td>
+</tr>
+<tr>
+<td>Response larger than 100 KiB is not cached</td>
+<td><strong>Pass</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The final driver result:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>basicScore:       40/40
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>concurrencyScore: 15/15
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>cacheScore:       15/15
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>totalScore:       70/70
+</span></code></pre></div>
+<p>The lab's progression is the lesson: first make one byte stream correct, then isolate each connection, then synchronize only the state that is genuinely shared.</p>
 
 
 
@@ -1004,7 +1125,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.instant.prefetch", "navigation.tracking", "navigation.top", "navigation.footer", "navigation.indexes", "toc.follow", "content.code.copy", "content.tooltips", "search.suggest", "search.highlight", "search.share"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../javascripts/mathjax.js"></script>
       

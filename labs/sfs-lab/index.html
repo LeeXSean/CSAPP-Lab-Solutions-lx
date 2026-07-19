@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A small on-disk file system you implement and then make thread-safe and scalable.">
+        <meta name="description" content="An AI-assisted 22/22 SFS solution with atomic rename, fine-grained locking, and verified parallel scaling.">
       
       
         <meta name="author" content="Xiang Li">
@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -641,7 +641,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#part-1-the-missing-pieces" class="md-nav__link">
+  <a href="#part-1-completing-the-api" class="md-nav__link">
     <span class="md-ellipsis">
       
         Part 1
@@ -656,6 +656,56 @@
     <span class="md-ellipsis">
       
         Part 2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keep-the-global-table-off-the-hot-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keep the global table off the hot path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#derive-the-block-from-the-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derive the block from the position
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#directory-reads-must-join-the-file-lock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory reads must join the file lock
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
       
     </span>
   </a>
@@ -727,7 +777,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#part-1-the-missing-pieces" class="md-nav__link">
+  <a href="#part-1-completing-the-api" class="md-nav__link">
     <span class="md-ellipsis">
       
         Part 1
@@ -742,6 +792,56 @@
     <span class="md-ellipsis">
       
         Part 2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keep-the-global-table-off-the-hot-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keep the global table off the hot path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#derive-the-block-from-the-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derive the block from the position
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#directory-reads-must-join-the-file-lock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory reads must join the file lock
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
       
     </span>
   </a>
@@ -766,11 +866,15 @@
 
 
 <h1 id="sfs-lab-a-multithreaded-file-system">SFS Lab · A Multithreaded File System<a class="headerlink" href="#sfs-lab-a-multithreaded-file-system" title="Permanent link">¶</a></h1>
-<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> <span class="pill pill--dev">Developing</span> <span class="dot">·</span> <a href="https://github.com/LeeXSean/sfslab-local-handout">Handout</a></p>
+<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> <span class="pill pill--done">22/22</span> <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
 
-<div class="admonition warning">
-<p class="admonition-title">Status: writeup in progress</p>
-<p>I packaged the lab for offline self-study and I'm working through it — the full writeup, with the on-disk walkthrough and the locking design, lands after Proxy Lab. For now, here's the shape of the lab and its on-disk format.</p>
+<div class="admonition info">
+<p class="admonition-title">AI-assisted solution</p>
+<p>This implementation and writeup were completed with AI assistance because time was limited and the lab had low marginal value for my later parallel-computing direction. It is recorded explicitly as an <strong>AI-assisted solution</strong>, not presented as independent work.</p>
+</div>
+<div class="admonition success">
+<p class="admonition-title">Verified locally</p>
+<p><code>make baseline &amp;&amp; ./test-sfs -q</code> → <strong>22 / 22</strong> automatic points: correctness 12/12, ThreadSanitizer clean across three fuzzed schedules, and performance 10/10 at <strong>3.40×</strong> the calibrated global-mutex baseline.</p>
 </div>
 <p>SFS — the Shark File System — is a small but real on-disk file system: files, a directory, and free-space management, all persisted to a disk image. You implement it in a single file, <code>sfs-disk.c</code>, against a fixed API. What makes it more than a data-structure exercise is the second half: the file system has to be <strong>thread-safe <em>and</em> scalable</strong>, not merely correct.</p>
 <div class="admonition abstract">
@@ -863,33 +967,127 @@
 <tr>
 <td>Position</td>
 <td><code>sfs_getpos</code>, <code>sfs_seek</code></td>
-<td><strong>to implement</strong>; <code>seek</code> clamps to <code>[0, size]</code></td>
+<td>positions are independent per descriptor; <code>seek</code> clamps to <code>[0, size]</code></td>
 </tr>
 <tr>
 <td>Namespace</td>
 <td><code>sfs_remove</code>, <code>sfs_rename</code></td>
-<td><strong><code>rename</code> to implement</strong>, and it must be atomic</td>
+<td>Unix-style unlink; overwrite-rename is atomic</td>
 </tr>
 <tr>
 <td>Listing</td>
 <td><code>sfs_list</code></td>
 <td>one name per call via an opaque cookie</td>
 </tr>
+<tr>
+<td>Size extensions</td>
+<td><code>sfs_fstat</code>, <code>sfs_ftruncate</code></td>
+<td>unscored developer-edition operations</td>
+</tr>
 </tbody>
 </table>
-<p>Two carry non-obvious contracts. <strong><code>rename</code></strong> must atomically replace an existing target. And <strong><code>sfs_list</code></strong> hands back one filename per call through a cookie you must not skip — it has to stay coherent even as other threads create, delete, or rename entries mid-iteration (which is also why you must never mutate the directory from inside a list loop).</p>
-<h2 id="part-1-the-missing-pieces">Part 1 · The missing pieces<a class="headerlink" href="#part-1-the-missing-pieces" title="Permanent link">¶</a></h2>
-<p><code>sfs_getpos</code> and <code>sfs_seek</code> are the gentle warm-up: report and adjust a descriptor's position, clamping a seek into <code>[0, file size]</code> (deliberately friendlier than <code>lseek</code>). <code>sfs_rename</code> is the first real one — walking the directory chain, moving an entry, and collapsing an existing target without ever leaving the namespace in a half-updated state.</p>
-<h2 id="part-2-locking-for-correctness-and-scale">Part 2 · Locking, for correctness and scale<a class="headerlink" href="#part-2-locking-for-correctness-and-scale" title="Permanent link">¶</a></h2>
-<p>This is the actual lab. The provided baseline wraps every call in one global mutex: correct, but every operation serializes, so nothing scales. The goal is <strong>fine-grained locking</strong> — think per-file and per-block rather than one big lock — so that two threads writing different files don't wait on each other, while the tricky invariants still hold:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>   baseline:  [ one global mutex ]   correct, but every op serializes
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>   goal:      per-file / per-block locks
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>              - ops on independent files run in parallel
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>              - rename stays atomic; list stays coherent
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>              - a fixed lock order keeps it deadlock-free
+<p>Two carry non-obvious contracts. <strong><code>rename</code></strong> must atomically replace an existing target. And <strong><code>sfs_list</code></strong> hands back one filename per call through a cookie, while concurrent namespace changes must never expose a torn entry.</p>
+<h2 id="part-1-completing-the-api">Part 1 · Completing the API<a class="headerlink" href="#part-1-completing-the-api" title="Permanent link">¶</a></h2>
+<p><code>sfs_getpos</code> validates the descriptor and returns its byte position. <code>sfs_seek</code> computes the new position without overflowing on <code>SSIZE_MIN</code>, then clamps it to the file's current size:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">delta</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)(</span><span class="o">-</span><span class="p">(</span><span class="n">delta</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">distance</span><span class="p">;</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">delta</span><span class="p">;</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">file_size</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">position</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">                   </span><span class="o">?</span><span class="w"> </span><span class="n">file_size</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">                   </span><span class="o">:</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">distance</span><span class="p">;</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>The interesting tension is that the shared structures — the directory chain, the free list — are exactly the ones every operation touches, so naive fine-grained locking either reintroduces a global bottleneck or opens the door to deadlock and torn updates. Finding a locking discipline that is provably safe <em>and</em> measurably faster than the baseline is the whole point.</p>
+<p>The <code>-(delta + 1) + 1</code> form matters because directly negating the most negative signed integer is undefined behavior.</p>
+<p><code>sfs_rename</code> takes exclusive namespace and table locks for the entire operation. If the target exists, it is unlinked first while the locks remain held; then the source entry's name is replaced. Other threads therefore observe either the old namespace or the completed new namespace, never a missing intermediate target.</p>
+<p>An overwritten file may still be open. In that case its directory entry is copied into the in-memory open-file record before the on-disk slot is cleared. Existing descriptors keep working, and the blocks return to the free list only after the final close — the same lifetime rule used by Unix <code>unlink</code>.</p>
+<h2 id="part-2-locking-for-correctness-and-scale">Part 2 · Locking, for correctness and scale<a class="headerlink" href="#part-2-locking-for-correctness-and-scale" title="Permanent link">¶</a></h2>
+<p>The provided baseline wraps every call in one global mutex. That is correct, but unrelated files cannot make progress together. The final design gives each shared resource only the lock it needs:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>   directory rwlock     names, directory slots, directory-block chain
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>   open-table rwlock    descriptor/file-table lifetime and cold table scans
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>   fd-slot mutex        one descriptor pointer and its current position
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>   per-file mutex       file size, block chain, and file contents
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>   allocator mutex      free-list allocation and reclamation
+</span></code></pre></div>
+<p>The lock order is always:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>directory → open table → fd slot → file → allocator
+</span></code></pre></div>
+<p>Functions skip locks they do not need, but never reverse that order. Namespace operations use the left side of the chain; ordinary I/O starts at its fd slot. Allocation is a short final critical section only when a file grows or releases blocks.</p>
+<h3 id="keep-the-global-table-off-the-hot-path">Keep the global table off the hot path<a class="headerlink" href="#keep-the-global-table-off-the-hot-path" title="Permanent link">¶</a></h3>
+<p>The first correct version held a shared open-table lock around every <code>read</code>, <code>write</code>, <code>getpos</code>, and <code>seek</code>. It passed all functional tests and TSan, but measured only <strong>5.20 M calls/s</strong>, or <strong>0.56×</strong> the one-mutex baseline. A reader lock is not free: all eight threads still modify the same rwlock cache line.</p>
+<p>The final version uses a permanent mutex for each fd slot. A data operation locks its own slot to pin the descriptor, then locks only that file:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>read / write / seek:  fd-slot lock → per-file lock
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>getpos:               fd-slot lock
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>write that grows:     fd-slot lock → per-file lock → allocator lock
+</span></code></pre></div>
+<p>Different files now touch different fd and file locks. The open-table lock remains for <code>open</code>, <code>close</code>, namespace operations, and the unscored truncate path, but disappears from the millions of timed I/O calls.</p>
+<h3 id="derive-the-block-from-the-position">Derive the block from the position<a class="headerlink" href="#derive-the-block-from-the-position" title="Permanent link">¶</a></h3>
+<p>The starter caches <code>startBlock</code> and <code>currBlock</code> in every descriptor. Those cached pointers must all be repaired when an empty file gains its first block or when <code>ftruncate</code> releases blocks. Updating every live descriptor would require a global table scan on the write path.</p>
+<p>The solution keeps only <code>currPos</code> and derives the current block from the file's on-disk head while holding the file lock. SFS files are small linked chains, and the performance workload stays in one block, so this removes shared bookkeeping without creating a measured cost. It also prevents stale block IDs after truncation.</p>
+<h3 id="directory-reads-must-join-the-file-lock">Directory reads must join the file lock<a class="headerlink" href="#directory-reads-must-join-the-file-lock" title="Permanent link">¶</a></h3>
+<p><code>first_block</code> lives inside a directory entry but changes when the first write allocates a block. Protecting only directory <em>names</em> was therefore insufficient: TSan caught <code>sfs_list</code> and <code>sfs_open</code> reading <code>first_block</code> while another thread wrote it. Directory scans now find the corresponding open-file record and briefly take its file lock before inspecting that field.</p>
+<p>This is the useful lesson from the lab: synchronization follows the data, not the function name. A directory lookup can still depend on mutable file metadata.</p>
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Category A · feature traces</td>
+<td><strong>5/5</strong></td>
+</tr>
+<tr>
+<td>Category B · sequential correctness</td>
+<td><strong>4/4</strong></td>
+</tr>
+<tr>
+<td>Category C · concurrent correctness</td>
+<td><strong>3/3</strong></td>
+</tr>
+<tr>
+<td>ThreadSanitizer schedule-fuzz sweep</td>
+<td><strong>3/3 seeds, no races</strong></td>
+</tr>
+<tr>
+<td>Calibrated baseline</td>
+<td><strong>9,670,997 calls/s</strong></td>
+</tr>
+<tr>
+<td>Student median</td>
+<td><strong>32,917,944 calls/s</strong></td>
+</tr>
+<tr>
+<td>Student / baseline</td>
+<td><strong>3.40× → 10/10</strong></td>
+</tr>
+<tr>
+<td>Automatic score</td>
+<td><strong>22/22</strong></td>
+</tr>
+<tr>
+<td>Developer Category D</td>
+<td><strong>1/1</strong></td>
+</tr>
+<tr>
+<td>Optional Category X</td>
+<td><strong>3/3</strong></td>
+</tr>
+<tr>
+<td>ASan + UBSan on D/X routes</td>
+<td><strong>Pass</strong></td>
+</tr>
+<tr>
+<td>GCC static analyzer + <code>clang-format</code></td>
+<td><strong>Pass</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The automatic score deliberately excludes four manual style points, so the verified claim is <strong>22/22</strong>, not 26/26.</p>
 
 
 
@@ -994,7 +1192,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.instant.prefetch", "navigation.tracking", "navigation.top", "navigation.footer", "navigation.indexes", "toc.follow", "content.code.copy", "content.tooltips", "search.suggest", "search.highlight", "search.share"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../javascripts/mathjax.js"></script>
       
