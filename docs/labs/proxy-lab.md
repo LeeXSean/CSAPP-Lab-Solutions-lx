@@ -1,25 +1,27 @@
 ---
 title: Proxy Lab
-description: Designing a caching, concurrent HTTP proxy — sockets, threads, and a reader–writer cache.
+description: A 70/70 HTTP proxy — URI parsing, detached workers, and an approximate-LRU response cache.
 ---
 
-# Proxy Lab · A Concurrent Web Proxy
+# Proxy Lab · Building a Web Proxy
 
-<p class="article-meta">Network programming <span class="dot">·</span> <span class="pill pill--wip">In progress</span> <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/tree/main/Proxy_Lab">Handout</a></p>
+<p class="article-meta">Network programming <span class="dot">·</span> Score 70/70 <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Proxy_Lab/proxylab-handout/proxy.c">proxy.c</a></p>
 
-!!! warning "Status: not yet implemented"
-    This is the course finale, and it's still on my desk — `proxy.c` currently holds only the skeleton. What follows is the **design** I'm building toward, not a walkthrough of finished code. I'll replace it with a full, annotated implementation once it passes the driver.
+!!! success "Verified locally"
+    `NO_PROXY= no_proxy= ./driver.sh` → **70 / 70**: Basic 40/40, Concurrency 15/15, Cache 15/15.
 
-A proxy sits between a browser and the web: it accepts the browser's HTTP request, forwards it to the origin server, and streams the reply back — optionally remembering recent replies so it can answer the next identical request itself. Building one ties together everything the course has taught about **sockets, concurrency, and synchronization**.
+The proxy accepts an HTTP request from a browser, opens a second connection to the origin, rewrites the request into the form the origin expects, relays the response byte-for-byte, and may cache the full response.
 
 !!! abstract "The assignment"
-    Build the proxy in three escalating stages:
+    Build the proxy in three steps:
 
-    1. A **sequential** proxy that correctly forwards one HTTP GET at a time.
-    2. A **concurrent** proxy that serves many clients simultaneously.
-    3. A **caching** proxy that stores recent objects (≤ 100 KB each, ≤ ~1 MB total) and serves hits without contacting the origin.
+    1. A **sequential** proxy that forwards HTTP `GET` requests correctly.
+    2. A **concurrent** proxy so one slow origin cannot stall every client.
+    3. A **cache** for objects up to 100 KiB, with total cached payload bytes capped at 1,049,000 and eviction ordered by approximate LRU.
 
-## The request path
+The cache is the only shared state. Parsing, request rewriting, origin I/O, and the temporary response copy stay private to one worker thread.
+
+## One request path
 
 ``` text
                   GET http://host/path                 hit
@@ -36,81 +38,234 @@ A proxy sits between a browser and the web: it accepts the browser's HTTP reques
 
 ---
 
-## Stage 1 · A sequential proxy
+## Part 1 · Forward one request correctly
 
-The backbone is a classic accept loop. For each connection: read and parse the request line, rebuild a clean request for the origin, connect, forward, and relay the response byte-for-byte.
+A browser sends an **absolute URI** to the proxy; the origin server expects only the path. `doit` therefore splits the request line into `hostname`, `port`, and `path`, opens the origin connection, and rebuilds an HTTP/1.0 request.
+
+### Parse the absolute URI in place { data-toc-label="URI parsing" }
+
+The lab traffic uses URIs of the form `http://host[:port]/path`. `parse_uri` edits that string directly:
 
 ``` c
-int listenfd = Open_listenfd(port);
-while (1) {
-    int connfd = Accept(listenfd, ...);
-    doit(connfd);           // parse -> forward -> relay
-    Close(connfd);
+head = strstr(uri, "//") + 2;
+if ((tail = strchr(head, ':')) == NULL) {
+    strcpy(port, "80");
+    tail = strchr(head, '/');
+    *tail = '\0';
+    strcpy(hostname, head);
+} else {
+    *tail++ = '\0';
+    strcpy(hostname, head);
+    head = tail;
+    tail = strchr(head, '/');
+    *tail = '\0';
+    strcpy(port, head);
 }
+*tail = '/';
+strcpy(path, tail);
 ```
 
-The care lives in `doit`:
+A request like
 
-- **Parse** the request line `GET http://host:port/path HTTP/1.1`, splitting out host, port, and path.
-- **Rebuild headers** — force `HTTP/1.0`, send the required `Host`, `User-Agent`, `Connection: close`, and `Proxy-Connection: close`, and pass through the rest.
-- **Relay** the origin's response back to the client with robust I/O, since a response can arrive in arbitrarily sized chunks.
+``` text
+http://www.example.com:8080/assets/logo.png
+       └── hostname ──┘ └port┘└──── path ────┘
+```
 
-!!! note "Robust I/O (RIO) is non-negotiable"
-    Network reads and writes return *short counts* — fewer bytes than asked — at any moment. Every transfer goes through the CS:APP `rio_*` buffered wrappers, which loop until the full amount is moved or EOF is reached. A raw `read`/`write` here silently truncates pages.
+becomes:
 
-## Stage 2 · Making it concurrent
+``` text
+hostname = www.example.com
+port     = 8080
+path     = /assets/logo.png
+```
 
-A sequential proxy stalls every client behind the slowest origin. The plan is **one thread per connection**, detached so it cleans up after itself:
+If the URI omits a port, the proxy supplies `80`. The cache key is then normalized as `hostname:port/path`, so `http://x/a` and `http://x:80/a` map to the same entry. This parser is intentionally lab-sized: it handles the handout's HTTP form, not general HTTPS or IPv6 URLs.
+
+### Rebuild the request; do not tunnel the client's headers blindly { data-toc-label="Request headers" }
+
+The outgoing request always starts in one fixed shape:
 
 ``` c
-pthread_t tid;
-int *connfdp = Malloc(sizeof(int));   // (1) heap-per-thread, no shared stack slot
-*connfdp = Accept(listenfd, ...);
-Pthread_create(&tid, NULL, thread, connfdp);
+snprintf(request, sizeof(request), "GET %s HTTP/1.0\r\n", path);
+Rio_writen(serverfd, request, strlen(request));
 
-void *thread(void *vargp) {
-    int connfd = *(int *)vargp;
-    Pthread_detach(pthread_self());   // (2) auto-reap; no join needed
+snprintf(request, sizeof(request), "Host: %s\r\n", hostname);
+Rio_writen(serverfd, request, strlen(request));
+Rio_writen(serverfd, user_agent_hdr, strlen(user_agent_hdr));
+Rio_writen(serverfd, "Connection: close\r\n",
+           strlen("Connection: close\r\n"));
+Rio_writen(serverfd, "Proxy-Connection: close\r\n",
+           strlen("Proxy-Connection: close\r\n"));
+```
+
+Then `forward_request` reads the remaining client headers and filters the four headers this proxy handles specially:
+
+| Header from client | Proxy action | Why |
+|---|---|---|
+| `Host` | Discard the client's copy | The proxy already emitted its own `Host` line |
+| `User-Agent` | Replace | The handout requires one fixed value |
+| `Connection` | Replace with `close` | Make EOF delimit the origin response |
+| `Proxy-Connection` | Replace with `close` | Keep the client-proxy hop short-lived |
+| Everything else | Forward unchanged | Preserve end-to-end metadata |
+
+The header loop stops on the blank line `\r\n`, and the proxy writes one final blank line to terminate the request. For this lab, forcing HTTP/1.0 plus `Connection: close` is the simplest correct rule: the origin's response ends at EOF, so the proxy does not need to manage persistent upstream connections.
+
+### Relay bytes, not strings
+
+The response path is binary-safe because it uses the byte count returned by `Rio_readnb`:
+
+``` c
+while ((n = Rio_readnb(&server_rio, buf, MAXBUF)) > 0)
+    Rio_writen(clientfd, buf, n);
+```
+
+That `n` matters. A JPEG, PDF, or executable can contain `\0` bytes long before the end of the response, so `strlen` would truncate it.
+
+---
+
+## Part 2 · One detached worker per connection
+
+A correct sequential proxy still fails the concurrency part of the lab. One slow origin would occupy the only control path and block every later client. The smallest fix is one detached thread per accepted connection:
+
+``` c
+while (1) {
+    connfd = Malloc(sizeof(int));
+    *connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+    Pthread_create(&tid, NULL, thread, connfd);
+}
+
+void *thread(void *vargp)
+{
+    Pthread_detach(pthread_self());
+
+    int connfd = *((int *)vargp);
     Free(vargp);
+
     doit(connfd);
     Close(connfd);
     return NULL;
 }
 ```
 
-1. Each thread gets its connection fd through its **own** heap cell — passing `&connfd` from the loop would race, since the next `accept` overwrites it.
-2. Detaching lets the thread release its resources on exit without the main thread having to `join`.
+The heap-allocated `connfd` is an ownership handoff, not shared state. The accept loop produces one descriptor, the worker consumes it, and the temporary heap cell disappears immediately. Passing `&connfd` from the loop stack would race as soon as the next `Accept` overwrote the same slot.
 
-And one small but fatal detail: **ignore `SIGPIPE`**. Writing to a connection the peer already closed raises it, and the default action kills the whole proxy — so it must be handled or ignored.
+Two details matter here:
 
-## Stage 3 · The cache, shared safely
+- `Pthread_detach` lets finished workers clean themselves up; the main loop never needs `join`.
+- `Signal(SIGPIPE, SIG_IGN)` converts a write to a closed socket from a process-killing signal into an `EPIPE` error.
 
-The cache maps a request URL to a stored response object, bounded in per-object and total size, with LRU eviction. The subtlety is that it is shared across all the threads from stage 2, so access must be synchronized — but it is **read-mostly**, so a plain mutex (which would serialize even concurrent readers) wastes the concurrency we just built.
+---
 
-The intended fit for the stored objects is a **reader–writer** discipline: any number of readers may copy cached bytes at once, but a writer (inserting or evicting) needs exclusive access.
+## Part 3 · Cache complete responses
 
-``` text
-   reader --.
-   reader --+--  shared read (concurrent)  -->  +-------+
-   reader --'                                   | cache |
-                                                +-------+
-   writer ------  exclusive (insert / evict) -->  locks everyone else out
+The cache stores the entire origin response — headers and body together — under the normalized `hostname:port/path` key.
+
+``` c
+typedef struct cache_object {
+    char *key;
+    char *data;
+    size_t size;
+    unsigned long recent;
+    struct cache_object *next;
+} cache_object;
 ```
 
-One wrinkle: a strict LRU hit is not completely read-only, because it must update that entry's recency. The final implementation must keep that metadata update out of the shared-read section — either record a timestamp atomically (or under a short metadata lock), or take the write side for the hit. Relinking an LRU list while holding only a read lock would race.
+Each object owns exact-sized heap copies of its key and response bytes. That makes the cache budget precise: `cache_size` counts stored response bytes only, which is exactly what the handout limits.
 
-The intended shape:
+### Cache invariants
 
-- **Lookup (reader):** acquire the read side, scan for the URL, copy out the object, and — if recency is an atomic timestamp — update it before releasing. Send only after the object has been copied out.
-- **Non-atomic LRU:** treat the hit as a writer from the outset; never relink or mutate shared recency state under a read lock.
-- **Store (writer):** acquire the write side, evict LRU entries until the new object fits, insert, release.
-- Guard against the classic reader–writer **writer starvation**, and copy hits *out* under the lock so a concurrent eviction can't free the buffer mid-send.
+| Invariant | How the code enforces it |
+|---|---|
+| One object ≤ `MAX_OBJECT_SIZE` | Stop accumulating once the response would exceed 100 KiB |
+| Total payload ≤ `MAX_CACHE_SIZE` | Evict least-recently used entries until the new object fits |
+| Binary-safe storage | Copy each chunk with `memcpy(..., n)` |
+| One key stored once | Re-check for an existing key while holding the write lock |
 
-## What's left
+On a miss, the worker relays the response to the client and simultaneously accumulates a **private** cache candidate in its stack buffer `object[MAX_OBJECT_SIZE]`:
 
-- [ ] Sequential `doit`: request parsing + header rewriting + relay
-- [ ] Thread-per-connection concurrency + `SIGPIPE` handling
-- [ ] Reader–writer cache with LRU eviction
-- [ ] Pass the `driver.sh` basic / concurrency / cache checks
+``` c
+while ((n = Rio_readnb(&server_rio, buf, MAXBUF)) > 0) {
+    Rio_writen(clientfd, buf, n);
+    if (cacheable && object_size + (size_t)n <= MAX_OBJECT_SIZE) {
+        memcpy(object + object_size, buf, n);
+        object_size += n;
+    }
+    else {
+        cacheable = 0;
+    }
+}
 
-I'll write this section up properly — with the real code and its annotations — once the implementation is done.
+if (cacheable)
+    cache_put(key, object, object_size);
+```
+
+Once the response grows past 100 KiB, the proxy stops extending the private copy but keeps forwarding the rest of the bytes to the client. Oversized responses still reach the client intact; only the cache copy is abandoned.
+
+### Many readers, one writer { data-toc-label="Reader-writer locking" }
+
+The cache is read-mostly, so the shared state sits behind one `pthread_rwlock_t`.
+
+A cache hit proceeds in two phases:
+
+``` text
+read lock → find matching key → copy bytes to caller buffer → unlock
+write lock → find key again → bump recent timestamp → unlock
+```
+
+The worker copies cached bytes into its own local buffer under the read lock, then releases the lock before writing to the client socket. A slow client therefore does not pin the cache.
+
+The first lookup's `object` pointer cannot be reused after releasing the read lock: another writer may evict and free that entry before the write lock is acquired. The second phase therefore searches by `key` again before updating recency.
+
+`recent` is mutable metadata, so `cache_get` reacquires the write side to update it:
+
+``` c
+pthread_rwlock_wrlock(&cache_lock);
+for (object = cache; object; object = object->next) {
+    if (!strcmp(object->key, key)) {
+        object->recent = ++cache_clock;
+        break;
+    }
+}
+pthread_rwlock_unlock(&cache_lock);
+```
+
+The order is approximate LRU: `cache_clock` increases monotonically, and eviction removes the object with the smallest `recent` value.
+
+Insertion and eviction stay entirely under the write lock:
+
+``` c
+while (cache && cache_size + size > MAX_CACHE_SIZE)
+    cache_evict_lru();
+
+object->recent = ++cache_clock;
+object->next = cache;
+cache = object;
+cache_size += size;
+```
+
+`cache_evict_lru` linearly scans the linked list. Under a 1 MiB total-byte budget, that `O(n)` eviction cost is acceptable.
+
+---
+
+## Verification
+
+| Check | Result |
+|---|---|
+| Basic text and binary forwarding | **40/40** |
+| Slow origin does not block another client | **15/15** |
+| Cached object survives origin shutdown | **15/15** |
+| 16 simultaneous hits after origin shutdown | **16/16 identical** |
+| Recently read entry survives later eviction pressure | **Pass** |
+| Response larger than 100 KiB is not cached | **Pass** |
+
+Driver summary:
+
+``` text
+basicScore:       40/40
+concurrencyScore: 15/15
+cacheScore:       15/15
+totalScore:       70/70
+```
+
+The lab's progression matches the finished design: first make one request path correct, then give each connection its own worker, then synchronize only the state that is actually shared.

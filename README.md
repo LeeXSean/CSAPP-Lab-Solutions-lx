@@ -4,7 +4,7 @@
 
 ***Computer Systems: A Programmer's Perspective*** (3rd ed.) · CMU 15-213
 
-Hand-built lab solutions with source-backed design walkthroughs.
+Lab solutions with source-backed design walkthroughs.
 
 ### 📖 &nbsp; [**Read the notes → leexsean.github.io/CSAPP-Lab-Solutions-lx**](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/)
 
@@ -17,13 +17,14 @@ shown in the table and at the top of each writeup.
 
 | # | Lab | Focus | Result | Writeup |
 |:-:|-----|-------|--------|---------|
-| 01 | **Data Lab** | Bit manipulation, integer & float encoding | `btest` **36/36** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/data-lab/) |
-| 02 | **Bomb Lab** | Reverse engineering · GDB · x86-64 | 6 phases **+ secret** defused | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/bomb-lab/) |
-| 03 | **Attack Lab** | Buffer overflow · code injection · ROP | **5/5** phases pass | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/attack-lab/) |
+| 01 | **Data Lab** | Bit manipulation, integer & float encoding | **36/36** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/data-lab/) |
+| 02 | **Bomb Lab** | Reverse engineering · GDB · x86-64 | **6 + secret** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/bomb-lab/) |
+| 03 | **Attack Lab** | Buffer overflow · code injection · ROP | **5/5** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/attack-lab/) |
 | 04 | **Cache Lab** | LRU cache simulator · blocked transpose | **53/61** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/cache-lab/) |
-| 05 | **Shell Lab** | Processes · signals · job control | **16/16** traces | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/shell-lab/) |
+| 05 | **Shell Lab** | Processes · signals · job control | **16/16** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/shell-lab/) |
 | 06 | **Malloc Lab** | Allocator · segregated free lists | **97/100** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/malloc-lab/) |
-| 07 | **Proxy Lab** | Concurrent, caching HTTP proxy | 🔄 in progress | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/proxy-lab/) |
+| 07 | **Proxy Lab** | Concurrent, caching HTTP proxy | **70/70** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/proxy-lab/) |
+| 08 | **SFS Lab** *(AI-assisted)* | On-disk file system · fine-grained locking | **22/22** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/sfs-lab/) |
 
 <details>
 <summary><b>A few design highlights</b></summary>
@@ -34,6 +35,8 @@ shown in the table and at the top of each writeup.
 > - **Cache Lab** — an `O(E)` LRU simulator; the 64×64 transpose splits each 8×8 block into four 4×4 sub-blocks, staging data in `B` to dodge conflict misses.
 > - **Shell Lab** — signal masking erases the `fork`/`addjob` race; `sigsuspend` replaces the busy-wait in `waitfg`.
 > - **Malloc Lab** — segregated explicit free lists, footer-less allocated blocks via a `prev_alloc` bit, and a `realloc` that grows in place before copying.
+> - **Proxy Lab** — one detached worker per connection; binary-safe response relay and a reader–writer-locked approximate-LRU cache.
+> - **SFS Lab** — explicitly AI-assisted; atomic rename and per-file locking reach 3.40× the calibrated global-mutex baseline.
 
 </details>
 

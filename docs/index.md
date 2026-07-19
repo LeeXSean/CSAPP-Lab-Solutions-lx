@@ -71,25 +71,25 @@ hide:
 
     `malloc`/`free`/`realloc` from the ground up, six designs deep — from one implicit list to twelve segregated rings.
 
--   <span class="lab-tag">07 · Networking</span> <span class="pill pill--wip">In progress</span>
+-   <span class="lab-tag">07 · Networking</span> <span class="pill pill--done">70/70</span>
 
     ### [Proxy Lab](labs/proxy-lab.md)
 
     ---
 
-    A caching, concurrent HTTP proxy that ties together sockets, concurrency, and synchronization.
+    An HTTP proxy that parses absolute URIs, rewrites hop-by-hop headers, and caches full responses under an approximate LRU policy.
 
--   <span class="lab-tag">08 · File Systems</span> <span class="pill pill--dev">Developing</span>
+-   <span class="lab-tag">08 · File Systems</span> <span class="pill pill--done">22/22 · AI-assisted</span>
 
     ### [SFS Lab](labs/sfs-lab.md)
 
     ---
 
-    A small on-disk file system, made thread-safe and scalable with fine-grained locking.
+    A small mmap-backed file system with atomic rename, open-file lifetime tracking, and per-file locking that scales past the global baseline.
 
 </div>
 
 ---
 
 !!! quote "About these notes"
-    The first seven entries follow CMU's *Computer Systems: A Programmer's Perspective* (3rd ed.); SFS Lab is a separate file-system extension. Every completed solution was run against its grader, with the result shown at the top of the writeup. Proxy Lab and SFS Lab are still in progress.
+    The first seven entries follow CMU's *Computer Systems: A Programmer's Perspective* (3rd ed.); SFS Lab is a separate file-system extension and is explicitly marked as AI-assisted. Every completed solution was run against its grader, with the result shown at the top of the writeup.

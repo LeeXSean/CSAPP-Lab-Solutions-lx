@@ -1,0 +1,77 @@
+#####################################################################
+# SFS Lab: Writing a Multithreaded File System
+#
+# Developer-edition student handout files
+#####################################################################
+
+For a full description of the lab, see the writeup (sfslab.pdf),
+which is extracted alongside the sfslab/ directory.
+
+This branch provides the unscored D/X extensions.  It deliberately leaves
+sfs_getpos, sfs_seek, sfs_rename, and student synchronization unfinished;
+use main instead when you want the course-shaped starter semantics.
+
+***********
+Main files:
+***********
+
+sfs-disk.c
+        The SFS implementation.  This is the only file you need to
+        edit.  It contains three unimplemented functions (sfs_getpos,
+        sfs_seek, sfs_rename) and, once those work, it is where you
+        add locking to make the file system thread-safe and scalable.
+
+sfs-api.h
+        The API specification you are implementing.  Read the doc
+        comment above each function carefully.  Do not modify.
+
+test-sfs.c
+        The test driver and autograder.  Type "make test" (or run
+        ./test-sfs) to score your work.
+
+**********************************
+Other support files for the driver
+**********************************
+
+sfs-disk.h          On-disk data structures and constants.
+sfs-support.c       Low-level disk image and mmap support.
+sfs-fsck.c          File system consistency checker (./sfs-fsck).
+sfs-baseline-ref.c  Handout code under one global mutex; used by
+                    "make baseline" to calibrate the performance
+                    score for your machine.  Do not modify.
+Makefile            Builds sfs-fsck, test-sfs, and test-sfs-baseline.
+.clang-format       Formatting configuration matching the handout style.
+
+*******************************
+Building and running the driver
+*******************************
+
+To build the driver, type:
+
+    unix> make
+
+To run the autograder:
+
+    unix> ./test-sfs
+
+To run the developer-only checks (not scored):
+
+    unix> make developer-test
+    unix> make x-traces
+
+The developer starter is expected to fail some traces: sfs_getpos,
+sfs_seek, and sfs_rename are intentionally left for you to implement.
+
+Before reading anything into the performance score, calibrate the
+baseline for your machine (once per machine, and again after the
+machine changes):
+
+    unix> make baseline
+
+"make grade" runs the calibration and the autograder in one step.
+Run everything from this directory; the driver expects ./sfs-fsck
+and ./.perf_baseline to be reachable from the working directory.
+
+The developer checks cover sfs_fstat/sfs_ftruncate and the zero-block empty
+file, expandable-directory, and Unix-unlink routes.  They do not affect the
+22-point score.
