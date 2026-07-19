@@ -641,6 +641,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#one-file-three-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One file, three layers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="One file, three layers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unlink-changes-reachability-not-open-file-lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unlink changes reachability, not open-file lifetime
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#part-1-completing-the-api" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -648,6 +676,45 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Part 1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positions-belong-to-descriptors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positions belong to descriptors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rename-holds-the-namespace-as-one-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rename holds the namespace as one transaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reads-and-writes-walk-500-byte-payloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reads and writes walk 500-byte payloads
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -777,6 +844,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#one-file-three-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One file, three layers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="One file, three layers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unlink-changes-reachability-not-open-file-lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unlink changes reachability, not open-file lifetime
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#part-1-completing-the-api" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -784,6 +879,45 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Part 1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positions-belong-to-descriptors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positions belong to descriptors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rename-holds-the-namespace-as-one-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rename holds the namespace as one transaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reads-and-writes-walk-500-byte-payloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reads and writes walk 500-byte payloads
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -866,7 +1000,7 @@
 
 
 <h1 id="sfs-lab-a-multithreaded-file-system">SFS Lab · A Multithreaded File System<a class="headerlink" href="#sfs-lab-a-multithreaded-file-system" title="Permanent link">¶</a></h1>
-<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> <span class="pill pill--done">22/22</span> <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
+<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> Keywords: disk blocks, file lifetime, fine-grained locking <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
 
 <div class="admonition info">
 <p class="admonition-title">AI-assisted solution</p>
@@ -987,39 +1121,146 @@
 </tbody>
 </table>
 <p>Two carry non-obvious contracts. <strong><code>rename</code></strong> must atomically replace an existing target. And <strong><code>sfs_list</code></strong> hands back one filename per call through a cookie, while concurrent namespace changes must never expose a torn entry.</p>
+<h2 id="one-file-three-layers">One file, three layers<a class="headerlink" href="#one-file-three-layers" title="Permanent link">¶</a></h2>
+<p>An open file is not represented by one object. SFS separates the name stored on disk, the state shared by every opener, and the position private to one descriptor:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>openFileDescTable[fd]
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>        |
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        v
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  sfs_mem_filedesc_t          one per open descriptor
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  +------------------+
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  | currPos          |        independent seek position
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  | fileEntry -------+---+
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  +------------------+   |
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>                         v
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>                   sfs_mem_file_t       one per open file
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>                   +----------------+
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>                   | refCount       |
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>                   | unlinked       |
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>                   | pthread lock   |  serializes this file&#39;s data
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>                   | diskFile ------+---+
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>                   +----------------+   |
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>                                        v
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>                                  sfs_dir_entry_t      persisted in the image
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>                                  { name, size, first_block }
+</span></code></pre></div>
+<p>Opening the same name twice therefore creates two descriptor objects with separate <code>currPos</code> values, but both point to one <code>sfs_mem_file_t</code>. The shared object owns the per-file mutex and points at the one directory entry containing the size and first block:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">sfs_mem_file_t</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">refCount</span><span class="p">;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">unlinked</span><span class="p">;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="n">pthread_mutex_t</span><span class="w"> </span><span class="n">lock</span><span class="p">;</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="n">sfs_dir_entry_t</span><span class="w"> </span><span class="o">*</span><span class="n">diskFile</span><span class="p">;</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="n">sfs_dir_entry_t</span><span class="w"> </span><span class="n">unlinkedFile</span><span class="p">;</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span><span class="w"> </span><span class="n">sfs_mem_file_t</span><span class="p">;</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">sfs_mem_filedesc_t</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="n">sfs_mem_file_t</span><span class="w"> </span><span class="o">*</span><span class="n">fileEntry</span><span class="p">;</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">currPos</span><span class="p">;</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="p">}</span><span class="w"> </span><span class="n">sfs_mem_filedesc_t</span><span class="p">;</span>
+</span></code></pre></div>
+<p><code>sfs_open</code> takes the directory and open-table write locks, finds or creates the on-disk entry, reuses an existing memory-file object when one exists, and allocates a free descriptor slot. This is why a file lock protects file contents while a descriptor-slot lock protects only one caller's position and pointer.</p>
+<h3 id="unlink-changes-reachability-not-open-file-lifetime">Unlink changes reachability, not open-file lifetime<a class="headerlink" href="#unlink-changes-reachability-not-open-file-lifetime" title="Permanent link">¶</a></h3>
+<p>Removing a closed file can return its blocks immediately. Removing an open file cannot: its descriptors must continue to work even though the name has disappeared. <code>unlinkDirectoryEntry</code> copies the directory entry into the memory-file object, redirects <code>diskFile</code>, and only then clears the visible slot:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">open</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">open</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">open</span><span class="o">-&gt;</span><span class="n">unlinkedFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">entry</span><span class="p">;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">open</span><span class="o">-&gt;</span><span class="n">diskFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">open</span><span class="o">-&gt;</span><span class="n">unlinkedFile</span><span class="p">;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">open</span><span class="o">-&gt;</span><span class="n">unlinked</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">open</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">entry</span><span class="o">-&gt;</span><span class="n">first_block</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">SFS_EMPTY_FILE_BLOCK</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="n">freeBlocks</span><span class="p">(</span><span class="n">entry</span><span class="o">-&gt;</span><span class="n">first_block</span><span class="p">);</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">}</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">memset</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="w"> </span><span class="o">*</span><span class="n">entry</span><span class="p">);</span>
+</span></code></pre></div>
+<p>The final <code>sfs_close</code> sees <code>refCount</code> reach zero and frees the saved block chain. This small indirection gives SFS the Unix rule: unlink removes a <strong>name</strong> now; it destroys the underlying file only after the last open reference is gone.</p>
 <h2 id="part-1-completing-the-api">Part 1 · Completing the API<a class="headerlink" href="#part-1-completing-the-api" title="Permanent link">¶</a></h2>
+<h3 id="positions-belong-to-descriptors">Positions belong to descriptors<a class="headerlink" href="#positions-belong-to-descriptors" title="Permanent link">¶</a></h3>
 <p><code>sfs_getpos</code> validates the descriptor and returns its byte position. <code>sfs_seek</code> computes the new position without overflowing on <code>SSIZE_MIN</code>, then clamps it to the file's current size:</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">delta</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)(</span><span class="o">-</span><span class="p">(</span><span class="n">delta</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">distance</span><span class="p">;</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">delta</span><span class="p">;</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">file_size</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">position</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">                   </span><span class="o">?</span><span class="w"> </span><span class="n">file_size</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">                   </span><span class="o">:</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">distance</span><span class="p">;</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">}</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">delta</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)(</span><span class="o">-</span><span class="p">(</span><span class="n">delta</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">distance</span><span class="p">;</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">delta</span><span class="p">;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">file_size</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">position</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">                   </span><span class="o">?</span><span class="w"> </span><span class="n">file_size</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">                   </span><span class="o">:</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">distance</span><span class="p">;</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>The <code>-(delta + 1) + 1</code> form matters because directly negating the most negative signed integer is undefined behavior.</p>
-<p><code>sfs_rename</code> takes exclusive namespace and table locks for the entire operation. If the target exists, it is unlinked first while the locks remain held; then the source entry's name is replaced. Other threads therefore observe either the old namespace or the completed new namespace, never a missing intermediate target.</p>
-<p>An overwritten file may still be open. In that case its directory entry is copied into the in-memory open-file record before the on-disk slot is cleared. Existing descriptors keep working, and the blocks return to the free list only after the final close — the same lifetime rule used by Unix <code>unlink</code>.</p>
+<h3 id="rename-holds-the-namespace-as-one-transaction">Rename holds the namespace as one transaction<a class="headerlink" href="#rename-holds-the-namespace-as-one-transaction" title="Permanent link">¶</a></h3>
+<p><code>sfs_rename</code> takes exclusive directory and open-table locks for the entire operation. If the target exists, it is unlinked first while both locks remain held; then the source entry's name is replaced:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">pthread_rwlock_wrlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">directoryLock</span><span class="p">);</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">pthread_rwlock_wrlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">openTableLock</span><span class="p">);</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">sfs_dir_entry_t</span><span class="w"> </span><span class="o">*</span><span class="n">old_entry</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">findDirectoryEntry</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="cm">/* validate old_entry and handle old_name == new_name */</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">sfs_dir_entry_t</span><span class="w"> </span><span class="o">*</span><span class="n">new_entry</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">findDirectoryEntry</span><span class="p">(</span><span class="n">new_name</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">new_entry</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="n">unlinkDirectoryEntry</span><span class="p">(</span><span class="n">new_entry</span><span class="p">);</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="kt">size_t</span><span class="w"> </span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">new_name</span><span class="p">);</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">memcpy</span><span class="p">(</span><span class="n">old_entry</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">new_name</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">memset</span><span class="p">(</span><span class="n">old_entry</span><span class="o">-&gt;</span><span class="n">name</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">len</span><span class="p">,</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">SFS_FILE_NAME_SIZE_LIMIT</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="n">pthread_rwlock_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">openTableLock</span><span class="p">);</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="n">pthread_rwlock_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">directoryLock</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Other threads therefore observe either the old namespace or the completed new namespace, never the half-finished state between target removal and source renaming.</p>
+<p>An overwritten target may still be open. The same unlink path above preserves its private directory-entry copy, so existing descriptors keep working and the blocks return to the free list only after the final close.</p>
+<h3 id="reads-and-writes-walk-500-byte-payloads">Reads and writes walk 500-byte payloads<a class="headerlink" href="#reads-and-writes-walk-500-byte-payloads" title="Permanent link">¶</a></h3>
+<p>Each 512-byte file block spends 12 bytes on its header, leaving <code>BLOCK_DATA_SIZE == 500</code> bytes. A read first caps its byte count at EOF, finds the block containing <code>currPos</code>, then copies one block-bounded chunk at a time:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kt">size_t</span><span class="w"> </span><span class="n">totalToRead</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sizeMin</span><span class="p">(</span><span class="n">fileSize</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">currPos</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">sfs_block_file_t</span><span class="w"> </span><span class="o">*</span><span class="n">diskBlock</span><span class="w"> </span><span class="o">=</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="n">accessFileBlock</span><span class="p">(</span><span class="n">blockForPosition</span><span class="p">(</span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">currPos</span><span class="p">));</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kt">size_t</span><span class="w"> </span><span class="n">blockPos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">currPos</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">BLOCK_DATA_SIZE</span><span class="p">;</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="kt">size_t</span><span class="w"> </span><span class="n">chunkSize</span><span class="w"> </span><span class="o">=</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="n">sizeMin</span><span class="p">(</span><span class="n">roundUp</span><span class="p">(</span><span class="n">currPos</span><span class="p">,</span><span class="w"> </span><span class="n">BLOCK_DATA_SIZE</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">currPos</span><span class="p">,</span><span class="w"> </span><span class="n">toRead</span><span class="p">);</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">for</span><span class="w"> </span><span class="p">(;;)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">chunkSize</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">        </span><span class="n">memcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">diskBlock</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">blockPos</span><span class="p">],</span><span class="w"> </span><span class="n">chunkSize</span><span class="p">);</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">        </span><span class="n">buf</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">chunkSize</span><span class="p">;</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">        </span><span class="n">toRead</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">chunkSize</span><span class="p">;</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">toRead</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">        </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">    </span><span class="n">blockPos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">    </span><span class="n">chunkSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sizeMin</span><span class="p">(</span><span class="n">BLOCK_DATA_SIZE</span><span class="p">,</span><span class="w"> </span><span class="n">toRead</span><span class="p">);</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">    </span><span class="n">diskBlock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">accessFileBlock</span><span class="p">(</span><span class="n">diskBlock</span><span class="o">-&gt;</span><span class="n">h</span><span class="p">.</span><span class="n">next_block</span><span class="p">);</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>At an exact block boundary the first <code>chunkSize</code> is zero; the loop advances once before copying. Otherwise the first chunk consumes the remainder of the current block, and later chunks start at offset zero. In either case a chunk never crosses a block. Only after all copies finish does the descriptor advance by <code>totalToRead</code>.</p>
+<p>Writes use the same walk in the other direction. Before touching the file, <code>sfs_write</code> calculates the final position and allocates <strong>all</strong> additional blocks it will need:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">endPos</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">fileAllocSize</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">newSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">roundUp</span><span class="p">(</span><span class="n">endPos</span><span class="p">,</span><span class="w"> </span><span class="n">BLOCK_DATA_SIZE</span><span class="p">);</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">extra</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">newSize</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">fileAllocSize</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">BLOCK_DATA_SIZE</span><span class="p">;</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="n">firstNewId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocateBlocks</span><span class="p">(</span><span class="n">extra</span><span class="p">,</span><span class="w"> </span><span class="n">SFS_BLOCK_TYPE_FILE</span><span class="p">);</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">firstNewId</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">        </span><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">file</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">        </span><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">descriptorLocks</span><span class="p">[</span><span class="n">fd</span><span class="p">]);</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="n">ENOSPC</span><span class="p">;</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>The new chain is attached only when the copy reaches the old tail. Allocation failure therefore leaves the original file unchanged instead of exposing a partial write. An empty file uses the sentinel <code>SFS_EMPTY_FILE_BLOCK</code>; its first successful write swaps that sentinel for the new chain's head.</p>
 <h2 id="part-2-locking-for-correctness-and-scale">Part 2 · Locking, for correctness and scale<a class="headerlink" href="#part-2-locking-for-correctness-and-scale" title="Permanent link">¶</a></h2>
 <p>The provided baseline wraps every call in one global mutex. That is correct, but unrelated files cannot make progress together. The final design gives each shared resource only the lock it needs:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>   directory rwlock     names, directory slots, directory-block chain
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>   open-table rwlock    descriptor/file-table lifetime and cold table scans
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>   fd-slot mutex        one descriptor pointer and its current position
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>   per-file mutex       file size, block chain, and file contents
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>   allocator mutex      free-list allocation and reclamation
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>   directory rwlock     names, directory slots, directory-block chain
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>   open-table rwlock    descriptor/file-table lifetime and cold table scans
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>   fd-slot mutex        one descriptor pointer and its current position
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>   per-file mutex       file size, block chain, and file contents
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>   allocator mutex      free-list allocation and reclamation
 </span></code></pre></div>
 <p>The lock order is always:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>directory → open table → fd slot → file → allocator
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>directory → open table → fd slot → file → allocator
 </span></code></pre></div>
 <p>Functions skip locks they do not need, but never reverse that order. Namespace operations use the left side of the chain; ordinary I/O starts at its fd slot. Allocation is a short final critical section only when a file grows or releases blocks.</p>
 <h3 id="keep-the-global-table-off-the-hot-path">Keep the global table off the hot path<a class="headerlink" href="#keep-the-global-table-off-the-hot-path" title="Permanent link">¶</a></h3>
 <p>The first correct version held a shared open-table lock around every <code>read</code>, <code>write</code>, <code>getpos</code>, and <code>seek</code>. It passed all functional tests and TSan, but measured only <strong>5.20 M calls/s</strong>, or <strong>0.56×</strong> the one-mutex baseline. A reader lock is not free: all eight threads still modify the same rwlock cache line.</p>
 <p>The final version uses a permanent mutex for each fd slot. A data operation locks its own slot to pin the descriptor, then locks only that file:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>read / write / seek:  fd-slot lock → per-file lock
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>getpos:               fd-slot lock
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>write that grows:     fd-slot lock → per-file lock → allocator lock
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>read / write / seek:  fd-slot lock → per-file lock
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>getpos:               fd-slot lock
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>write that grows:     fd-slot lock → per-file lock → allocator lock
 </span></code></pre></div>
 <p>Different files now touch different fd and file locks. The open-table lock remains for <code>open</code>, <code>close</code>, namespace operations, and the unscored truncate path, but disappears from the millions of timed I/O calls.</p>
 <h3 id="derive-the-block-from-the-position">Derive the block from the position<a class="headerlink" href="#derive-the-block-from-the-position" title="Permanent link">¶</a></h3>

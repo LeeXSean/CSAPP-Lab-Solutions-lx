@@ -612,6 +612,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Stage 1 · Forward one request correctly">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#turning-an-absolute-uri-into-an-origin-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        URI parsing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rebuild-hop-by-hop-headers-preserve-the-rest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -754,6 +782,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Stage 1 · Forward one request correctly">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#turning-an-absolute-uri-into-an-origin-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        URI parsing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rebuild-hop-by-hop-headers-preserve-the-rest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -824,7 +880,7 @@
 
 
 <h1 id="proxy-lab-a-concurrent-caching-proxy">Proxy Lab · A Concurrent Caching Proxy<a class="headerlink" href="#proxy-lab-a-concurrent-caching-proxy" title="Permanent link">¶</a></h1>
-<p class="article-meta">Network programming <span class="dot">·</span> <span class="pill pill--done">70/70</span> <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Proxy_Lab/proxylab-handout/proxy.c">proxy.c</a></p>
+<p class="article-meta">Network programming <span class="dot">·</span> Keywords: HTTP, RIO, threads, LRU cache <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Proxy_Lab/proxylab-handout/proxy.c">proxy.c</a></p>
 
 <div class="admonition success">
 <p class="admonition-title">Verified locally</p>
@@ -855,56 +911,123 @@
 <hr />
 <h2 id="stage-1-forward-one-request-correctly">Stage 1 · Forward one request correctly<a class="headerlink" href="#stage-1-forward-one-request-correctly" title="Permanent link">¶</a></h2>
 <p>For each accepted connection, <code>doit</code> reads the request line, splits the absolute URI into <code>hostname</code>, <code>port</code>, and <code>path</code>, connects to the origin, and relays its response back to the browser.</p>
-<p>The outgoing request is rebuilt instead of copied blindly:</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">snprintf</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">request</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;GET %s HTTP/1.0</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">);</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">request</span><span class="p">));</span>
+<h3 id="turning-an-absolute-uri-into-an-origin-request">Turning an absolute URI into an origin request<a class="headerlink" href="#turning-an-absolute-uri-into-an-origin-request" title="Permanent link">¶</a></h3>
+<p>A browser talks to a proxy with an <strong>absolute URI</strong>, while an origin server expects only the path:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>http://www.example.com:8080/assets/logo.png
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>       └── hostname ──┘ └port┘└──── path ────┘
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">snprintf</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">request</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;Host: %s</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">hostname</span><span class="p">);</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">request</span><span class="p">));</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">user_agent_hdr</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">user_agent_hdr</span><span class="p">));</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">            </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">));</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Proxy-Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">            </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;Proxy-Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">));</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>hostname = www.example.com
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>port     = 8080
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>path     = /assets/logo.png
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>key      = www.example.com:8080/assets/logo.png
 </span></code></pre></div>
-<p><code>forward_request</code> discards the browser's versions of those four headers, preserves every other header, and writes the final blank line. With <code>Connection: close</code>, EOF cleanly marks the end of the origin response.</p>
+<p><code>parse_uri</code> edits the request URI in place. It skips the scheme, uses <code>:</code> to detect an explicit port, and uses the first <code>/</code> to separate the authority from the path. If the URI omits a port, the proxy supplies HTTP's default port <code>80</code>; it does <strong>not</strong> replace a port that the origin explicitly selected.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">head</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strstr</span><span class="p">(</span><span class="n">uri</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;//&quot;</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span><span class="w"> </span><span class="p">((</span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strchr</span><span class="p">(</span><span class="n">head</span><span class="p">,</span><span class="w"> </span><span class="sc">&#39;:&#39;</span><span class="p">))</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">strcpy</span><span class="p">(</span><span class="n">port</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;80&quot;</span><span class="p">);</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strchr</span><span class="p">(</span><span class="n">head</span><span class="p">,</span><span class="w"> </span><span class="sc">&#39;/&#39;</span><span class="p">);</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="o">*</span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="n">strcpy</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span><span class="w"> </span><span class="n">head</span><span class="p">);</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="o">*</span><span class="n">tail</span><span class="o">++</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="n">strcpy</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span><span class="w"> </span><span class="n">head</span><span class="p">);</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="n">head</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tail</span><span class="p">;</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strchr</span><span class="p">(</span><span class="n">head</span><span class="p">,</span><span class="w"> </span><span class="sc">&#39;/&#39;</span><span class="p">);</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="o">*</span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="n">strcpy</span><span class="p">(</span><span class="n">port</span><span class="p">,</span><span class="w"> </span><span class="n">head</span><span class="p">);</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="p">}</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="o">*</span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;/&#39;</span><span class="p">;</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="n">strcpy</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="n">tail</span><span class="p">);</span>
+</span></code></pre></div>
+<p>The normalized <code>hostname:port/path</code> string is also the cache key, so the same resource has one identity whether the client wrote the default port explicitly or not. This parser intentionally covers the lab's <code>http://host[:port]/path</code> request form; it is not a general HTTPS or IPv6 URL parser.</p>
+<h3 id="rebuild-hop-by-hop-headers-preserve-the-rest">Rebuild hop-by-hop headers; preserve the rest<a class="headerlink" href="#rebuild-hop-by-hop-headers-preserve-the-rest" title="Permanent link">¶</a></h3>
+<p>The outgoing request is rebuilt instead of copied blindly:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">snprintf</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">request</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;GET %s HTTP/1.0</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">);</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">request</span><span class="p">));</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">snprintf</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">request</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;Host: %s</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">hostname</span><span class="p">);</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">request</span><span class="p">));</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="n">user_agent_hdr</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">user_agent_hdr</span><span class="p">));</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">            </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">));</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">Rio_writen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Proxy-Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">,</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">            </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;Proxy-Connection: close</span><span class="se">\r\n</span><span class="s">&quot;</span><span class="p">));</span>
+</span></code></pre></div>
+<p><code>forward_request</code> then reads the remaining client headers one line at a time:</p>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Proxy action</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Host</code></td>
+<td>Replace</td>
+<td>Must describe the parsed origin</td>
+</tr>
+<tr>
+<td><code>User-Agent</code></td>
+<td>Replace</td>
+<td>The handout requires one fixed value</td>
+</tr>
+<tr>
+<td><code>Connection</code></td>
+<td>Replace with <code>close</code></td>
+<td>Make EOF delimit the origin response</td>
+</tr>
+<tr>
+<td><code>Proxy-Connection</code></td>
+<td>Replace with <code>close</code></td>
+<td>Do not keep the client–proxy hop alive</td>
+</tr>
+<tr>
+<td>Every other header</td>
+<td>Forward unchanged</td>
+<td>Preserve end-to-end request metadata</td>
+</tr>
+</tbody>
+</table>
+<p>The loop stops on <code>\r\n</code>, discards the four replaced headers, forwards everything else, then writes one final blank line. This is why the fixed headers are emitted before <code>forward_request</code>: the function only has to filter the client's copies and finish the request.</p>
 <div class="admonition note">
 <p class="admonition-title">Why the response loop uses byte counts</p>
 <p>A response can contain a JPEG or executable, so <code>strlen</code> cannot measure it. <code>Rio_readnb</code> returns the exact number of bytes received; that count is passed unchanged to <code>Rio_writen</code>.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Rio_readnb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">server_rio</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">MAXBUF</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">Rio_writen</span><span class="p">(</span><span class="n">clientfd</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Rio_readnb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">server_rio</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">MAXBUF</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">Rio_writen</span><span class="p">(</span><span class="n">clientfd</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
 </span></code></pre></div>
 </div>
 <h2 id="stage-2-one-detached-thread-per-connection">Stage 2 · One detached thread per connection<a class="headerlink" href="#stage-2-one-detached-thread-per-connection" title="Permanent link">¶</a></h2>
 <p>A sequential proxy suffers head-of-line blocking: one origin that never replies prevents every later client from being served. The smallest correct concurrent design is one detached worker per accepted connection.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">connfd</span><span class="p">));</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="o">*</span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Accept</span><span class="p">(</span><span class="n">listenfd</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">SA</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">clientaddr</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">clientlen</span><span class="p">);</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="n">Pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tid</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="kr">thread</span><span class="p">,</span><span class="w"> </span><span class="n">connfd</span><span class="p">);</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="kr">thread</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">vargp</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="n">Pthread_detach</span><span class="p">(</span><span class="n">pthread_self</span><span class="p">());</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">vargp</span><span class="p">;</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="n">Free</span><span class="p">(</span><span class="n">vargp</span><span class="p">);</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="n">doit</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="n">Close</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="p">}</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">connfd</span><span class="p">));</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="o">*</span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Accept</span><span class="p">(</span><span class="n">listenfd</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">SA</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">clientaddr</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">clientlen</span><span class="p">);</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">Pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tid</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="kr">thread</span><span class="p">,</span><span class="w"> </span><span class="n">connfd</span><span class="p">);</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="kr">thread</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">vargp</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="n">Pthread_detach</span><span class="p">(</span><span class="n">pthread_self</span><span class="p">());</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">connfd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">vargp</span><span class="p">;</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="n">Free</span><span class="p">(</span><span class="n">vargp</span><span class="p">);</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="n">doit</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="n">Close</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>The heap cell is not shared state; it transfers ownership of one descriptor from the accept loop to one worker. Passing <code>&amp;connfd</code> from the loop would race when the next <code>Accept</code> overwrote the same stack slot. Detaching lets the system reclaim the finished thread without a <code>join</code>, and ignoring <code>SIGPIPE</code> prevents a disconnected client from killing the process:</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">Signal</span><span class="p">(</span><span class="n">SIGPIPE</span><span class="p">,</span><span class="w"> </span><span class="n">SIG_IGN</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">Signal</span><span class="p">(</span><span class="n">SIGPIPE</span><span class="p">,</span><span class="w"> </span><span class="n">SIG_IGN</span><span class="p">);</span>
 </span></code></pre></div>
 <h2 id="stage-3-cache-the-response-while-relaying-it">Stage 3 · Cache the response while relaying it<a class="headerlink" href="#stage-3-cache-the-response-while-relaying-it" title="Permanent link">¶</a></h2>
 <p>The cache key is the normalized <code>hostname:port/path</code>. Each entry owns an exact-sized copy of both the key and the complete HTTP response:</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">cache_object</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">key</span><span class="p">;</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">;</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">recent</span><span class="p">;</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">cache_object</span><span class="w"> </span><span class="o">*</span><span class="n">next</span><span class="p">;</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span><span class="w"> </span><span class="n">cache_object</span><span class="p">;</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">cache_object</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">key</span><span class="p">;</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">;</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">recent</span><span class="p">;</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">cache_object</span><span class="w"> </span><span class="o">*</span><span class="n">next</span><span class="p">;</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span><span class="w"> </span><span class="n">cache_object</span><span class="p">;</span>
 </span></code></pre></div>
 <p>Dynamic entries make <code>cache_size</code> mean exactly what the handout specifies: the sum of stored response bytes. Metadata and unused buffer capacity are not counted.</p>
 <table>
@@ -934,33 +1057,33 @@
 </tbody>
 </table>
 <p>On a miss, the ordinary relay loop also accumulates a private candidate object:</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Rio_readnb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">server_rio</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">MAXBUF</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">Rio_writen</span><span class="p">(</span><span class="n">clientfd</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cacheable</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">object_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">MAX_OBJECT_SIZE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="n">memcpy</span><span class="p">(</span><span class="n">object</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">object_size</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="n">object_size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">n</span><span class="p">;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="n">cacheable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">}</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cacheable</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">object_size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="n">cache_put</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">object</span><span class="p">,</span><span class="w"> </span><span class="n">object_size</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Rio_readnb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">server_rio</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">MAXBUF</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">Rio_writen</span><span class="p">(</span><span class="n">clientfd</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cacheable</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">object_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">MAX_OBJECT_SIZE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">        </span><span class="n">memcpy</span><span class="p">(</span><span class="n">object</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">object_size</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">        </span><span class="n">object_size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">n</span><span class="p">;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">        </span><span class="n">cacheable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">}</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cacheable</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">object_size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="n">cache_put</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">object</span><span class="p">,</span><span class="w"> </span><span class="n">object_size</span><span class="p">);</span>
 </span></code></pre></div>
 <p>An oversized response therefore still reaches the client intact; only the optional cache copy is abandoned.</p>
 <h3 id="concurrent-readers-exclusive-writers">Concurrent readers, exclusive writers<a class="headerlink" href="#concurrent-readers-exclusive-writers" title="Permanent link">¶</a></h3>
 <p>The cache is read-mostly, so a single <code>pthread_rwlock_t</code> protects it. Hit lookup takes the read side, allowing many threads to scan and copy cached bytes simultaneously. The copy is local to the worker, so the lock is released before the potentially slow network write:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>read lock → find entry → copy data + size → unlock → send local copy
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>read lock → find entry → copy data + size → unlock → send local copy
 </span></code></pre></div>
 <p>Recency is mutable metadata. After copying a hit, <code>cache_get</code> briefly takes the write side, finds the key again, and assigns a monotonically increasing timestamp. This produces an approximate LRU order without mutating the list under a read lock.</p>
 <p>Insertion and eviction stay entirely under the write lock:</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cache</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">cache_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">MAX_CACHE_SIZE</span><span class="p">)</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">cache_evict_lru</span><span class="p">();</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">object</span><span class="o">-&gt;</span><span class="n">recent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">++</span><span class="n">cache_clock</span><span class="p">;</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">object</span><span class="o">-&gt;</span><span class="n">next</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache</span><span class="p">;</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">object</span><span class="p">;</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">cache_size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cache</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">cache_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">MAX_CACHE_SIZE</span><span class="p">)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">cache_evict_lru</span><span class="p">();</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">object</span><span class="o">-&gt;</span><span class="n">recent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">++</span><span class="n">cache_clock</span><span class="p">;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">object</span><span class="o">-&gt;</span><span class="n">next</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache</span><span class="p">;</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">object</span><span class="p">;</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">cache_size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
 </span></code></pre></div>
 <p><code>cache_evict_lru</code> scans the short linked list for the smallest <code>recent</code> timestamp, unlinks that entry, subtracts its byte count, and frees its owned key and response.</p>
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">¶</a></h2>
@@ -999,10 +1122,10 @@
 </tbody>
 </table>
 <p>The final driver result:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>basicScore:       40/40
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>concurrencyScore: 15/15
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>cacheScore:       15/15
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>totalScore:       70/70
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>basicScore:       40/40
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>concurrencyScore: 15/15
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>cacheScore:       15/15
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>totalScore:       70/70
 </span></code></pre></div>
 <p>The lab's progression is the lesson: first make one byte stream correct, then isolate each connection, then synchronize only the state that is genuinely shared.</p>
 
