@@ -5,7 +5,7 @@ description: Integer and floating-point operations from bitwise primitives only 
 
 # Data Lab · Fighting With Bits
 
-<p class="article-meta">Data representation <span class="dot">·</span> Keywords: bitwise ops, two's complement, IEEE 754 <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Data_Lab/datalab-handout/bits.c">bits.c</a></p>
+<p class="article-meta">Data representation <span class="dot">·</span> Keywords: bitwise ops, two's complement, IEEE 754 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/Data_Lab/datalab-handout/bits.c">bits.c</a></p>
 
 !!! success "Verified locally"
     `./btest` → **36 / 36** correct · `./dlc bits.c` reports the solution legal (`-m32`).

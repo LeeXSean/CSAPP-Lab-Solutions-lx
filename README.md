@@ -1,30 +1,23 @@
-<div align="center">
-
 # CS:APP Labs
 
-***Computer Systems: A Programmer's Perspective*** (3rd ed.) · CMU 15-213
+Lab solutions and notes for *Computer Systems: A Programmer’s Perspective*
+(3rd edition), CMU 15-213.
 
-Lab solutions with source-backed design walkthroughs.
-
-### 📖 &nbsp; [**Read the notes → leexsean.github.io/CSAPP-Lab-Solutions-lx**](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/)
-
-</div>
-
----
+[Read the notes](https://leexsean.github.io/csapp-labs/) · [Browse the source](https://github.com/LeeXSean/csapp-labs)
 
 Every completed solution below is checked against the lab's actual grader; the result is
 shown in the table and at the top of each writeup.
 
 | # | Lab | Focus | Result | Writeup |
 |:-:|-----|-------|--------|---------|
-| 01 | **Data Lab** | Bit manipulation, integer & float encoding | **36/36** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/data-lab/) |
-| 02 | **Bomb Lab** | Reverse engineering · GDB · x86-64 | **6 + secret** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/bomb-lab/) |
-| 03 | **Attack Lab** | Buffer overflow · code injection · ROP | **5/5** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/attack-lab/) |
-| 04 | **Cache Lab** | LRU cache simulator · blocked transpose | **53/61** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/cache-lab/) |
-| 05 | **Shell Lab** | Processes · signals · job control | **16/16** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/shell-lab/) |
-| 06 | **Malloc Lab** | Allocator · segregated free lists | **97/100** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/malloc-lab/) |
-| 07 | **Proxy Lab** | Concurrent, caching HTTP proxy | **70/70** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/proxy-lab/) |
-| 08 | **SFS Lab** *(AI-assisted)* | On-disk file system · fine-grained locking | **22/22** | [Notes →](https://leexsean.github.io/CSAPP-Lab-Solutions-lx/labs/sfs-lab/) |
+| 01 | **Data Lab** | Bit manipulation, integer & float encoding | **36/36** | [Notes →](https://leexsean.github.io/csapp-labs/labs/data-lab/) |
+| 02 | **Bomb Lab** | Reverse engineering · GDB · x86-64 | **6 + secret** | [Notes →](https://leexsean.github.io/csapp-labs/labs/bomb-lab/) |
+| 03 | **Attack Lab** | Buffer overflow · code injection · ROP | **5/5** | [Notes →](https://leexsean.github.io/csapp-labs/labs/attack-lab/) |
+| 04 | **Cache Lab** | LRU cache simulator · blocked transpose | **53/61** | [Notes →](https://leexsean.github.io/csapp-labs/labs/cache-lab/) |
+| 05 | **Shell Lab** | Processes · signals · job control | **16/16** | [Notes →](https://leexsean.github.io/csapp-labs/labs/shell-lab/) |
+| 06 | **Malloc Lab** | Allocator · segregated free lists | **97/100** | [Notes →](https://leexsean.github.io/csapp-labs/labs/malloc-lab/) |
+| 07 | **Proxy Lab** | Concurrent, caching HTTP proxy | **70/70** | [Notes →](https://leexsean.github.io/csapp-labs/labs/proxy-lab/) |
+| 08 | **SFS Lab** *(AI-assisted)* | On-disk file system · fine-grained locking | **22/22** | [Notes →](https://leexsean.github.io/csapp-labs/labs/sfs-lab/) |
 
 <details>
 <summary><b>A few design highlights</b></summary>

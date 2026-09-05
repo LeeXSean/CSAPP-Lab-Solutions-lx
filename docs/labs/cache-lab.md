@@ -5,7 +5,7 @@ description: An LRU cache simulator, and a blocked matrix transpose tuned to a t
 
 # Cache Lab · Dancing With the Cache
 
-<p class="article-meta">Memory hierarchy <span class="dot">·</span> Keywords: LRU, conflict misses, blocking <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/tree/main/Cache_Lab/cachelab-handout">csim.c · trans.c</a></p>
+<p class="article-meta">Memory hierarchy <span class="dot">·</span> Keywords: LRU, conflict misses, blocking <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/tree/main/Cache_Lab/cachelab-handout">csim.c · trans.c</a></p>
 
 !!! success "Verified locally"
     `./driver.py` → **53 / 61**: csim **27/27**, transpose misses **288 / 1180 / 1993** for 32×32 / 64×64 / 61×67.

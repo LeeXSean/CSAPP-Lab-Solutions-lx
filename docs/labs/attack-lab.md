@@ -5,7 +5,7 @@ description: Stack buffer overflows — from code injection to a ROP chain that 
 
 # Attack Lab · Hijacking Control Flow
 
-<p class="article-meta">Software security <span class="dot">·</span> Keywords: buffer overflow, code injection, ROP <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/tree/main/Attack_Lab">Source</a></p>
+<p class="article-meta">Software security <span class="dot">·</span> Keywords: buffer overflow, code injection, ROP <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/tree/main/Attack_Lab">Source</a></p>
 
 !!! success "Verified locally"
     All **5 phases pass**: `hex2raw < phaseN.txt | ./ctarget -q` (1-3) and `./rtarget -q` (4-5) each report *"Valid solution"*.

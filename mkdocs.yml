@@ -2,11 +2,11 @@
 site_name: CS:APP Lab Notes
 site_author: Xiang Li
 site_description: Source-backed walkthroughs of the CMU 15-213 / CS:APP labs, checked against the graders.
-site_url: https://leexsean.github.io/CSAPP-Lab-Solutions-lx/
+site_url: https://leexsean.github.io/csapp-labs/
 copyright: © 2026 Xiang Li
 
-repo_url: https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx
-repo_name: LeeXSean/CSAPP-Lab-Solutions-lx
+repo_url: https://github.com/LeeXSean/csapp-labs
+repo_name: LeeXSean/csapp-labs
 edit_uri: ""
 
 # ── Theme ───────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ extra_javascript:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx
+      link: https://github.com/LeeXSean/csapp-labs
       name: GitHub
 
 # ── Navigation ──────────────────────────────────────────────────────────────

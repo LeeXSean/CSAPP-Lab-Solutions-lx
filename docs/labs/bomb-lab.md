@@ -5,7 +5,7 @@ description: Defusing a binary bomb phase by phase — reading x86-64 assembly i
 
 # Bomb Lab · Defusing the Bomb
 
-<p class="article-meta">Reverse engineering <span class="dot">·</span> Keywords: GDB, x86-64, jump tables, recursion, BST <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/tree/main/Bomb_Lab">Source</a></p>
+<p class="article-meta">Reverse engineering <span class="dot">·</span> Keywords: GDB, x86-64, jump tables, recursion, BST <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/tree/main/Bomb_Lab">Source</a></p>
 
 !!! success "Verified locally"
     `./bomb psol.txt` defuses all **6 phases plus the secret stage** — ending on *"Congratulations! You've defused the bomb!"*

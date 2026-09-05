@@ -5,7 +5,7 @@ description: A dynamic memory allocator from scratch — six designs, from one i
 
 # Malloc Lab · Writing malloc by Hand
 
-<p class="article-meta">Dynamic memory <span class="dot">·</span> Score 97/100 <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Malloc_Lab/malloclab-handout/mm.c">mm.c</a></p>
+<p class="article-meta">Dynamic memory <span class="dot">·</span> Score 97/100 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/Malloc_Lab/malloclab-handout/mm.c">mm.c</a></p>
 
 !!! success "Verified locally"
     `./mdriver -V` → **97 / 100** (util 57 + throughput 40), averaging 95% utilization over 11 traces.

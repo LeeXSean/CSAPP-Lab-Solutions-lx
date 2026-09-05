@@ -5,7 +5,7 @@ description: An AI-assisted 22/22 SFS solution — atomic rename, per-file locki
 
 # SFS Lab · Building a Small File System
 
-<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> Score 22/22 <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
+<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> Score 22/22 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
 
 !!! info "AI-assisted solution"
     This solution and writeup were completed with AI assistance. I keep that label explicit because SFS sits outside the main CS:APP lab sequence in this repo.

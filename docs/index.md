@@ -14,7 +14,7 @@ hide:
 
 <div class="hero-actions" markdown>
 [Start with Data Lab →](labs/data-lab.md){ .md-button .md-button--primary }
-[Source on GitHub](https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx){ .md-button }
+[Source on GitHub](https://github.com/LeeXSean/csapp-labs){ .md-button }
 </div>
 
 </div>

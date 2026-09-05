@@ -5,7 +5,7 @@ description: A 70/70 HTTP proxy — URI parsing, detached workers, and an approx
 
 # Proxy Lab · Building a Web Proxy
 
-<p class="article-meta">Network programming <span class="dot">·</span> Score 70/70 <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Proxy_Lab/proxylab-handout/proxy.c">proxy.c</a></p>
+<p class="article-meta">Network programming <span class="dot">·</span> Score 70/70 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/Proxy_Lab/proxylab-handout/proxy.c">proxy.c</a></p>
 
 !!! success "Verified locally"
     `NO_PROXY= no_proxy= ./driver.sh` → **70 / 70**: Basic 40/40, Concurrency 15/15, Cache 15/15.

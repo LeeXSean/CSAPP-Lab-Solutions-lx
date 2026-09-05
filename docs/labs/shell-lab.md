@@ -5,7 +5,7 @@ description: A job-control Unix shell — signals, process groups, and the fork/
 
 # Shell Lab · Building a Shell
 
-<p class="article-meta">Processes & signals <span class="dot">·</span> Keywords: fork, signals, process groups, reaping <span class="dot">·</span> <a href="https://github.com/LeeXSean/CSAPP-Lab-Solutions-lx/blob/main/Shell_Lab/shlab-handout/tsh.c">tsh.c</a></p>
+<p class="article-meta">Processes & signals <span class="dot">·</span> Keywords: fork, signals, process groups, reaping <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/Shell_Lab/shlab-handout/tsh.c">tsh.c</a></p>
 
 !!! success "Verified locally"
     All **16 traces** match `tshref` (PID-normalized) — `sdriver.pl -s ./tsh` vs `-s ./tshref`.
