@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="An AI-assisted 22/22 SFS solution — atomic rename, per-file locking, and 3.46× the calibrated baseline.">
+        <meta name="description" content="An AI-assisted SFS solution, with core correctness, optional extensions, and notes on locking.">
       
       
         <meta name="author" content="Xiang Li">
@@ -631,10 +631,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#empty-files-are-live-unused-slots-are-not" class="md-nav__link">
+  <a href="#optional-extension-empty-files-without-data-blocks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Empty files are live, unused slots are not
+        Optional extension: empty files without data blocks
       
     </span>
   </a>
@@ -659,10 +659,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unlink-removes-the-name-first-the-file-later" class="md-nav__link">
+  <a href="#optional-extension-unix-style-unlink" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unlink removes the name first, the file later
+        Optional extension: Unix-style unlink
       
     </span>
   </a>
@@ -736,15 +736,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#part-2-lock-only-the-state-that-is-shared" class="md-nav__link">
+  <a href="#part-2-optional-refinement-finer-grained-locks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Part 2 · Lock only the state that is shared
+        Part 2 · Optional refinement: finer-grained locks
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Part 2 · Lock only the state that is shared">
+    <nav class="md-nav" aria-label="Part 2 · Optional refinement: finer-grained locks">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -862,10 +862,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#empty-files-are-live-unused-slots-are-not" class="md-nav__link">
+  <a href="#optional-extension-empty-files-without-data-blocks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Empty files are live, unused slots are not
+        Optional extension: empty files without data blocks
       
     </span>
   </a>
@@ -890,10 +890,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unlink-removes-the-name-first-the-file-later" class="md-nav__link">
+  <a href="#optional-extension-unix-style-unlink" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unlink removes the name first, the file later
+        Optional extension: Unix-style unlink
       
     </span>
   </a>
@@ -967,15 +967,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#part-2-lock-only-the-state-that-is-shared" class="md-nav__link">
+  <a href="#part-2-optional-refinement-finer-grained-locks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Part 2 · Lock only the state that is shared
+        Part 2 · Optional refinement: finer-grained locks
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Part 2 · Lock only the state that is shared">
+    <nav class="md-nav" aria-label="Part 2 · Optional refinement: finer-grained locks">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1056,15 +1056,15 @@
 
 
 <h1 id="sfs-lab-building-a-small-file-system">SFS Lab · Building a Small File System<a class="headerlink" href="#sfs-lab-building-a-small-file-system" title="Permanent link">¶</a></h1>
-<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> Score 22/22 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
+<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> Correctness 12/12 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
 
 <div class="admonition info">
 <p class="admonition-title">AI-assisted solution</p>
-<p>This solution and writeup were completed with AI assistance. I keep that label explicit because SFS sits outside the main CS:APP lab sequence in this repo.</p>
+<p>This implementation and writeup were completed with AI assistance.</p>
 </div>
 <div class="admonition success">
 <p class="admonition-title">Verified locally</p>
-<p><code>make &amp;&amp; make baseline &amp;&amp; ./test-sfs -q</code> → <strong>22 / 22</strong> automatic points, with ThreadSanitizer clean across three fuzzed schedules and <strong>3.46×</strong> the calibrated baseline throughput.</p>
+<p><code>make &amp;&amp; make test</code> → <strong>12/12 correctness</strong>, with ThreadSanitizer clean across three fuzzed schedules. Performance is a separate, optional experiment.</p>
 </div>
 <p>SFS is a fixed-layout file system stored in an <code>mmap</code>'d disk image. The API is small — open, close, read, write, seek, list, remove, rename — but the implementation must keep three things consistent at once:</p>
 <ol>
@@ -1075,12 +1075,13 @@
 <p>The concurrency part is mostly about ownership: each piece of shared state gets one lock domain.</p>
 <div class="admonition abstract">
 <p class="admonition-title">The assignment</p>
-<p>The graded API in <code>sfs-api.h</code> asks for two kinds of work:</p>
+<p>The basic exercise has two steps:</p>
 <ul>
 <li><strong>Correctness</strong> — finish the missing operations <code>sfs_getpos</code>, <code>sfs_seek</code>, and <code>sfs_rename</code>, with <code>rename</code> required to replace an existing target atomically.</li>
-<li><strong>Concurrency</strong> — make the file system thread-safe and scalable enough to beat the calibrated baseline in the performance section.</li>
+<li><strong>Concurrency</strong> — make the file system thread-safe. Start with one mutex; fine-grained locking is a follow-up optimization.</li>
 </ul>
-<p>This repo's developer branch also carries unscored extensions such as <code>sfs_fstat</code> and <code>sfs_ftruncate</code>; they are part of the code here, but not part of the reported <strong>22/22</strong> automatic score.</p>
+<p>The code in this repository is an <strong>extended solution</strong>, based on the handout's <code>developer</code> branch. File sizing, zero-block empty files, directory growth, and Unix-style unlink are optional. They are described below to explain the code, not as prerequisites for finishing the lab.</p>
+<p>For the basic starter, use <a href="https://github.com/LeeXSean/sfslab">sfslab on main</a>. The <code>SFS_Lab/sfslab/</code> directory here contains completed functions; its adjacent archive contains the extension starter.</p>
 </div>
 <h2 id="the-on-disk-model">The on-disk model<a class="headerlink" href="#the-on-disk-model" title="Permanent link">¶</a></h2>
 <p>An SFS image is divided into fixed <strong>512-byte blocks</strong>. Block 0 is the <strong>super block</strong>; every other block starts with a 12-byte header:</p>
@@ -1136,8 +1137,8 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>{name, size, first_block} --&gt; [FILE] &lt;-&gt; [FILE] &lt;-&gt; [FILE] --&gt; 0
 </span></code></pre></div>
 <p>The root directory begins inside the super block and grows by chaining <code>DIR</code> blocks through <code>next_rootdir</code> when those embedded 15 entries fill up.</p>
-<h3 id="empty-files-are-live-unused-slots-are-not">Empty files are live, unused slots are not<a class="headerlink" href="#empty-files-are-live-unused-slots-are-not" title="Permanent link">¶</a></h3>
-<p>This repo's developer branch adds one extra encoding in <code>sfs-disk.h</code>:</p>
+<h3 id="optional-extension-empty-files-without-data-blocks">Optional extension: empty files without data blocks<a class="headerlink" href="#optional-extension-empty-files-without-data-blocks" title="Permanent link">¶</a></h3>
+<p>The optional extension format adds one extra encoding in <code>sfs-disk.h</code>:</p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="cp">#define SFS_EMPTY_FILE_BLOCK UINT32_MAX</span>
 </span></code></pre></div>
 <p>That creates a three-way distinction for <code>first_block</code>:</p>
@@ -1207,7 +1208,7 @@
 <li>Opening the same file twice gives two descriptors with <strong>independent</strong> <code>currPos</code> values.</li>
 <li>Every opener still shares one <code>sfs_mem_file_t</code>, so file size, block chain, and unlink state have one mutex and one reference count.</li>
 </ul>
-<h3 id="unlink-removes-the-name-first-the-file-later">Unlink removes the name first, the file later<a class="headerlink" href="#unlink-removes-the-name-first-the-file-later" title="Permanent link">¶</a></h3>
+<h3 id="optional-extension-unix-style-unlink">Optional extension: Unix-style unlink<a class="headerlink" href="#optional-extension-unix-style-unlink" title="Permanent link">¶</a></h3>
 <p>The helper <code>unlinkDirectoryEntry</code> is the core of both <code>sfs_remove</code> and overwrite-style <code>sfs_rename</code>:</p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">open</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">open</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
@@ -1326,7 +1327,7 @@
 </span></code></pre></div>
 <p>At an exact block boundary, the first <code>chunkSize</code> is zero, so the loop advances once before copying. Everywhere else, the first chunk consumes only the remainder of the current block. That keeps the logic uniform for both boundary and non-boundary positions.</p>
 <hr />
-<h2 id="part-2-lock-only-the-state-that-is-shared">Part 2 · Lock only the state that is shared<a class="headerlink" href="#part-2-lock-only-the-state-that-is-shared" title="Permanent link">¶</a></h2>
+<h2 id="part-2-optional-refinement-finer-grained-locks">Part 2 · Optional refinement: finer-grained locks<a class="headerlink" href="#part-2-optional-refinement-finer-grained-locks" title="Permanent link">¶</a></h2>
 <p>The code uses five lock domains:</p>
 <table>
 <thead>
@@ -1404,7 +1405,7 @@
 </span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>That removes one class of synchronization work. When an empty file receives its first block, or <code>ftruncate</code> frees tail blocks, there are no cached block IDs scattered across live descriptors that now need repair. The only persistent per-descriptor state is the byte position.</p>
-<p>This trade is cheap here because SFS files are short linked chains, and the measured result still reaches <strong>3.46×</strong> baseline throughput.</p>
+<p>Locating a block requires walking from the file head. This is simple for small files but repeated I/O near the end of a large file can become expensive; caching block positions would be a separate optimization.</p>
 <h3 id="directory-readers-sometimes-need-the-file-lock-too">Directory readers sometimes need the file lock too<a class="headerlink" href="#directory-readers-sometimes-need-the-file-lock-too" title="Permanent link">¶</a></h3>
 <p>Directory operations cannot reason only about names.</p>
 <p><code>findDirectoryEntry</code> and <code>sfs_list</code> both do this before deciding whether a slot is occupied:</p>
@@ -1431,10 +1432,12 @@
 <p>That is why <code>sfs_list</code> can resume exactly where it left off without materializing a separate iterator object. The API still requires callers to iterate until a nonzero status, but this implementation acquires and releases both read locks within each call; the cookie stores only the slot position.</p>
 <hr />
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">¶</a></h2>
-<p>The local verification run used the commands shown at the top of the page:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>make &amp;&amp; make baseline &amp;&amp; ./test-sfs -q
+<p>Run from <code>SFS_Lab/sfslab/</code>:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>make
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>make<span class="w"> </span><span class="nb">test</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>make<span class="w"> </span>developer-test<span class="w"> </span>x-traces
 </span></code></pre></div>
-<p>Results:</p>
+<p>Verified on September 5, 2026, using the updated local driver:</p>
 <table>
 <thead>
 <tr>
@@ -1445,57 +1448,44 @@
 <tbody>
 <tr>
 <td>Category A · feature tests</td>
-<td><strong>5/5</strong></td>
+<td>5/5</td>
 </tr>
 <tr>
 <td>Category B · sequential correctness</td>
-<td><strong>4/4</strong></td>
+<td>4/4</td>
 </tr>
 <tr>
-<td>Category C · concurrent correctness</td>
-<td><strong>3/3</strong></td>
+<td>Category C · actual concurrent calls</td>
+<td>3/3</td>
 </tr>
 <tr>
 <td>ThreadSanitizer fuzzed schedules</td>
-<td><strong>3/3 clean</strong></td>
+<td>3 clean runs</td>
 </tr>
 <tr>
-<td>Correctness subtotal</td>
-<td><strong>12/12</strong></td>
+<td>Correctness</td>
+<td>12/12</td>
 </tr>
 <tr>
-<td>Baseline throughput</td>
-<td><strong>9,235,281 ops/sec</strong></td>
+<td>Optional file-size trace</td>
+<td>1/1</td>
 </tr>
 <tr>
-<td>Student median throughput</td>
-<td><strong>31,948,215 ops/sec</strong></td>
-</tr>
-<tr>
-<td>Ratio</td>
-<td><strong>3.46×</strong></td>
-</tr>
-<tr>
-<td>Performance score</td>
-<td><strong>10/10</strong></td>
-</tr>
-<tr>
-<td>Automatic total</td>
-<td><strong>22/22</strong></td>
+<td>Optional directory/unlink/empty-file traces</td>
+<td>3/3</td>
 </tr>
 </tbody>
 </table>
-<p>Autograder summary:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>Correctness: 12/12
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>Performance:
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>  Student throughput (median of 5): 31948215 ops/sec
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>  Baseline throughput: 9235281 ops/sec
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>  Ratio (student / baseline): 3.46x
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>  Score: 10/10
-</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>
-</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>Total: 22/22  (+ up to 4 style pts)
+<p>Unlike the old driver, the normal C traces no longer serialize calls on behalf
+of the implementation. A passing result tests the locks in the solution itself.</p>
+<p>To explore performance separately:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>make<span class="w"> </span>grade
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># Or, after calibration:</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>./test-sfs<span class="w"> </span>--benchmark
 </span></code></pre></div>
-<p>The autograder reports <strong>22/22</strong> automatic points; the extra four are separate style points outside that score.</p>
+<p>The optional 22-point scale is local feedback, not an official CMU grade.
+Throughput depends on the machine and workload; the earlier 22/22 result is
+not the completion criterion for the current basic exercise.</p>
 
 
 
