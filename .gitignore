@@ -8,3 +8,13 @@ __pycache__/
 # Editor / local tooling
 .vscode/
 .DS_Store
+
+# SFS build and test outputs
+SFS_Lab/sfslab/*.o
+SFS_Lab/sfslab/sfs-fsck
+SFS_Lab/sfslab/test-sfs
+SFS_Lab/sfslab/test-sfs-baseline
+SFS_Lab/sfslab/test-sfs-tsan
+SFS_Lab/sfslab/.perf_baseline*
+SFS_Lab/sfslab/tsan_output.log
+SFS_Lab/sfslab/sfs-test.*/

@@ -79,13 +79,13 @@ hide:
 
     An HTTP proxy that parses absolute URIs, rewrites hop-by-hop headers, and caches full responses under an approximate LRU policy.
 
--   <span class="lab-tag">08 · File Systems</span> <span class="pill pill--done">22/22 · AI-assisted</span>
+-   <span class="lab-tag">08 · File Systems</span> <span class="pill pill--done">12/12 · AI-assisted</span>
 
     ### [SFS Lab](labs/sfs-lab.md)
 
     ---
 
-    A small mmap-backed file system with atomic rename, open-file lifetime tracking, and per-file locking that scales past the global baseline.
+    A small mmap-backed file system with atomic rename, open-file lifetime tracking, and synchronization, with finer-grained locking as an optional refinement.
 
 </div>
 

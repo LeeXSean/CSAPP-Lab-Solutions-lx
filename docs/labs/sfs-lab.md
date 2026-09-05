@@ -1,17 +1,17 @@
 ---
 title: SFS Lab
-description: An AI-assisted 22/22 SFS solution — atomic rename, per-file locking, and 3.46× the calibrated baseline.
+description: An AI-assisted SFS solution, with core correctness, optional extensions, and notes on locking.
 ---
 
 # SFS Lab · Building a Small File System
 
-<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> Score 22/22 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
+<p class="article-meta">File systems &amp; concurrency <span class="dot">·</span> Correctness 12/12 <span class="dot">·</span> <a href="https://github.com/LeeXSean/csapp-labs/blob/main/SFS_Lab/sfslab/sfs-disk.c">sfs-disk.c</a></p>
 
 !!! info "AI-assisted solution"
-    This solution and writeup were completed with AI assistance. I keep that label explicit because SFS sits outside the main CS:APP lab sequence in this repo.
+    This implementation and writeup were completed with AI assistance.
 
 !!! success "Verified locally"
-    `make && make baseline && ./test-sfs -q` → **22 / 22** automatic points, with ThreadSanitizer clean across three fuzzed schedules and **3.46×** the calibrated baseline throughput.
+    `make && make test` → **12/12 correctness**, with ThreadSanitizer clean across three fuzzed schedules. Performance is a separate, optional experiment.
 
 SFS is a fixed-layout file system stored in an `mmap`'d disk image. The API is small — open, close, read, write, seek, list, remove, rename — but the implementation must keep three things consistent at once:
 
@@ -22,12 +22,14 @@ SFS is a fixed-layout file system stored in an `mmap`'d disk image. The API is s
 The concurrency part is mostly about ownership: each piece of shared state gets one lock domain.
 
 !!! abstract "The assignment"
-    The graded API in `sfs-api.h` asks for two kinds of work:
+    The basic exercise has two steps:
 
     - **Correctness** — finish the missing operations `sfs_getpos`, `sfs_seek`, and `sfs_rename`, with `rename` required to replace an existing target atomically.
-    - **Concurrency** — make the file system thread-safe and scalable enough to beat the calibrated baseline in the performance section.
+    - **Concurrency** — make the file system thread-safe. Start with one mutex; fine-grained locking is a follow-up optimization.
 
-    This repo's developer branch also carries unscored extensions such as `sfs_fstat` and `sfs_ftruncate`; they are part of the code here, but not part of the reported **22/22** automatic score.
+    The code in this repository is an **extended solution**, based on the handout's `developer` branch. File sizing, zero-block empty files, directory growth, and Unix-style unlink are optional. They are described below to explain the code, not as prerequisites for finishing the lab.
+
+    For the basic starter, use [sfslab on main](https://github.com/LeeXSean/sfslab). The `SFS_Lab/sfslab/` directory here contains completed functions; its adjacent archive contains the extension starter.
 
 ## The on-disk model
 
@@ -100,9 +102,9 @@ So a file is represented by one directory entry plus a linked chain of `FILE` bl
 
 The root directory begins inside the super block and grows by chaining `DIR` blocks through `next_rootdir` when those embedded 15 entries fill up.
 
-### Empty files are live, unused slots are not
+### Optional extension: empty files without data blocks
 
-This repo's developer branch adds one extra encoding in `sfs-disk.h`:
+The optional extension format adds one extra encoding in `sfs-disk.h`:
 
 ``` c
 #define SFS_EMPTY_FILE_BLOCK UINT32_MAX
@@ -169,7 +171,7 @@ This split gives two immediate properties:
 - Opening the same file twice gives two descriptors with **independent** `currPos` values.
 - Every opener still shares one `sfs_mem_file_t`, so file size, block chain, and unlink state have one mutex and one reference count.
 
-### Unlink removes the name first, the file later
+### Optional extension: Unix-style unlink
 
 The helper `unlinkDirectoryEntry` is the core of both `sfs_remove` and overwrite-style `sfs_rename`:
 
@@ -329,7 +331,7 @@ At an exact block boundary, the first `chunkSize` is zero, so the loop advances 
 
 ---
 
-## Part 2 · Lock only the state that is shared
+## Part 2 · Optional refinement: finer-grained locks
 
 The code uses five lock domains:
 
@@ -411,7 +413,7 @@ static block_id blockForPosition(block_id first, size_t position)
 
 That removes one class of synchronization work. When an empty file receives its first block, or `ftruncate` frees tail blocks, there are no cached block IDs scattered across live descriptors that now need repair. The only persistent per-descriptor state is the byte position.
 
-This trade is cheap here because SFS files are short linked chains, and the measured result still reaches **3.46×** baseline throughput.
+Locating a block requires walking from the file head. This is simple for small files but repeated I/O near the end of a large file can become expensive; caching block positions would be a separate optimization.
 
 ### Directory readers sometimes need the file lock too
 
@@ -449,38 +451,37 @@ That is why `sfs_list` can resume exactly where it left off without materializin
 
 ## Verification
 
-The local verification run used the commands shown at the top of the page:
+Run from `SFS_Lab/sfslab/`:
 
-``` text
-make && make baseline && ./test-sfs -q
+```sh
+make
+make test
+make developer-test x-traces
 ```
 
-Results:
+Verified on September 5, 2026, using the updated local driver:
 
 | Check | Result |
 |---|---|
-| Category A · feature tests | **5/5** |
-| Category B · sequential correctness | **4/4** |
-| Category C · concurrent correctness | **3/3** |
-| ThreadSanitizer fuzzed schedules | **3/3 clean** |
-| Correctness subtotal | **12/12** |
-| Baseline throughput | **9,235,281 ops/sec** |
-| Student median throughput | **31,948,215 ops/sec** |
-| Ratio | **3.46×** |
-| Performance score | **10/10** |
-| Automatic total | **22/22** |
+| Category A · feature tests | 5/5 |
+| Category B · sequential correctness | 4/4 |
+| Category C · actual concurrent calls | 3/3 |
+| ThreadSanitizer fuzzed schedules | 3 clean runs |
+| Correctness | 12/12 |
+| Optional file-size trace | 1/1 |
+| Optional directory/unlink/empty-file traces | 3/3 |
 
-Autograder summary:
+Unlike the old driver, the normal C traces no longer serialize calls on behalf
+of the implementation. A passing result tests the locks in the solution itself.
 
-``` text
-Correctness: 12/12
-Performance:
-  Student throughput (median of 5): 31948215 ops/sec
-  Baseline throughput: 9235281 ops/sec
-  Ratio (student / baseline): 3.46x
-  Score: 10/10
+To explore performance separately:
 
-Total: 22/22  (+ up to 4 style pts)
+```sh
+make grade
+# Or, after calibration:
+./test-sfs --benchmark
 ```
 
-The autograder reports **22/22** automatic points; the extra four are separate style points outside that score.
+The optional 22-point scale is local feedback, not an official CMU grade.
+Throughput depends on the machine and workload; the earlier 22/22 result is
+not the completion criterion for the current basic exercise.

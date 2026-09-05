@@ -17,7 +17,7 @@ shown in the table and at the top of each writeup.
 | 05 | **Shell Lab** | Processes · signals · job control | **16/16** | [Notes →](https://leexsean.github.io/csapp-labs/labs/shell-lab/) |
 | 06 | **Malloc Lab** | Allocator · segregated free lists | **97/100** | [Notes →](https://leexsean.github.io/csapp-labs/labs/malloc-lab/) |
 | 07 | **Proxy Lab** | Concurrent, caching HTTP proxy | **70/70** | [Notes →](https://leexsean.github.io/csapp-labs/labs/proxy-lab/) |
-| 08 | **SFS Lab** *(AI-assisted)* | On-disk file system · fine-grained locking | **22/22** | [Notes →](https://leexsean.github.io/csapp-labs/labs/sfs-lab/) |
+| 08 | **SFS Lab** *(AI-assisted)* | On-disk file system · fine-grained locking | **12/12 correctness** | [Notes →](https://leexsean.github.io/csapp-labs/labs/sfs-lab/) |
 
 <details>
 <summary><b>A few design highlights</b></summary>
@@ -29,7 +29,7 @@ shown in the table and at the top of each writeup.
 > - **Shell Lab** — signal masking erases the `fork`/`addjob` race; `sigsuspend` replaces the busy-wait in `waitfg`.
 > - **Malloc Lab** — segregated explicit free lists, footer-less allocated blocks via a `prev_alloc` bit, and a `realloc` that grows in place before copying.
 > - **Proxy Lab** — one detached worker per connection; binary-safe response relay and a reader–writer-locked approximate-LRU cache.
-> - **SFS Lab** — explicitly AI-assisted; atomic rename and per-file locking reach 3.40× the calibrated global-mutex baseline.
+> - **SFS Lab** — explicitly AI-assisted; atomic rename and synchronization pass all 12 correctness traces; finer-grained locks and filesystem extensions are optional.
 
 </details>
 
