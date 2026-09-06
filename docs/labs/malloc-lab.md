@@ -123,7 +123,7 @@ An **allocated** block carries nothing but the header and the payload. A **free*
   |                  |             +------------------+
   |                  |             |  free payload*   |
   +------------------+             +------------------+
-       no footer!                   |  size | PA | 0   |  <- footer
+       no footer!                  |  size | PA | 0   |  <- footer
                                    +------------------+
 
    * absent from a minimum 16-byte free block
@@ -190,11 +190,11 @@ for (i = 0; i < CLASSNUM; i++) SET_SEG_HEAD(i, NULL);
 
  class 1 ring:
           F3.next -> F1
-       .-----------------------.
-       v                       |
+       .-----------------.
+       v                 |
       [F1] <-> [F2] <-> [F3]
-       |                       ^
-       '-----------------------'
+       |                 ^
+       '-----------------'
           F1.prev -> F3
 ```
 

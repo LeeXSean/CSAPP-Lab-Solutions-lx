@@ -16,19 +16,9 @@ theme:
   font: false
   custom_dir: docs/overrides
   features:
-    - navigation.instant
-    - navigation.instant.progress
-    - navigation.instant.prefetch
-    - navigation.tracking
-    - navigation.top
-    - navigation.footer
-    - navigation.indexes
-    - toc.follow
     - content.code.copy
-    - content.tooltips
-    - search.suggest
-    - search.highlight
-    - search.share
+    - navigation.sections
+    - toc.follow
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -65,7 +55,7 @@ markdown_extensions:
   - tables
   - toc:
       permalink: ¶
-      toc_depth: 3
+      toc_depth: 2
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -95,12 +85,6 @@ extra_css:
 extra_javascript:
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
-
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/LeeXSean/csapp-labs
-      name: GitHub
 
 # ── Navigation ──────────────────────────────────────────────────────────────
 nav:

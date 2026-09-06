@@ -27,7 +27,7 @@ A cache never sees "a variable" — only an address, split into three fields. Th
 ``` text
    63                       b+s        b            0
   +---------------------------+---------+-----------+
-  |            tag             |  set    |  offset   |
+  |            tag            |  set    |  offset   |
   +---------------------------+---------+-----------+
    address >> (b+s)            s bits     b bits
 ```
