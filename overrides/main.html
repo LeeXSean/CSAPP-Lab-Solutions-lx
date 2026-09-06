@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block site_nav %}{% endblock %}
+
+{% block content %}
+  {% if page and not page.is_homepage and page.toc %}
+    <details class="page-toc">
+      <summary>Contents</summary>
+      {% include "partials/toc.html" %}
+    </details>
+  {% endif %}
+  {{ super() }}
+{% endblock %}
+
+{% block footer %}
+  <footer class="notes-footer md-grid">
+    <nav aria-label="Notes navigation">
+      <a href="{{ nav.homepage.url | url }}">All notes</a>
+      {% if page and page.previous_page %}<a href="{{ page.previous_page.url | url }}">Previous: {{ page.previous_page.title }}</a>{% endif %}
+      {% if page and page.next_page %}<a href="{{ page.next_page.url | url }}">Next: {{ page.next_page.title }}</a>{% endif %}
+      <a href="{{ config.repo_url }}">Source</a>
+    </nav>
+    {{ config.copyright }}
+  </footer>
+{% endblock %}
